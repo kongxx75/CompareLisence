@@ -26,7 +26,10 @@ import com.yuyh.library.imgsel.common.ImageLoader;
 import com.yuyh.library.imgsel.config.ISListConfig;
 
 import java.util.List;
-
+/**
+ * @author by kieran
+ * Created on 2025/6/10
+ */
 public class MainActivity extends AppCompatActivity {
 
     private Button cameraBtn;

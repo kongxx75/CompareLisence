@@ -24,4 +24,5 @@ public interface PlateDao {
     PlateEntity findPlateByCode(String plateCode);
 
 
+
 }

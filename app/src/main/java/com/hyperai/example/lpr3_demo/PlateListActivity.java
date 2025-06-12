@@ -1,6 +1,7 @@
 package com.hyperai.example.lpr3_demo;
 
 import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -36,6 +37,9 @@ public class PlateListActivity extends AppCompatActivity {
         emptyTextView = findViewById(R.id.emptyTextView);
         fabAdd = findViewById(R.id.fab_add);
 
+        // 搜索输入框提示
+        searchEditText.setHint("输入查询信息");
+
         loadPlateData(null);
 
         // 搜索功能
@@ -47,15 +51,27 @@ public class PlateListActivity extends AppCompatActivity {
             @Override public void afterTextChanged(Editable s) {}
         });
 
-        // 长按删除
+        // 长按弹出操作菜单
         listView.setOnItemLongClickListener((AdapterView<?> parent, android.view.View view, int position, long id) -> {
-            PlateEntity toDelete = plates.get(position);
-            new AlertDialog.Builder(this)
-                    .setTitle("删除车牌")
-                    .setMessage("确定要删除[" + toDelete.getPlateCode() + "]吗？")
-                    .setPositiveButton("删除", (dialog, which) -> deletePlate(toDelete))
-                    .setNegativeButton("取消", null)
-                    .show();
+            PlateEntity selectedPlate = plates.get(position);
+
+            String[] options = {"取消", "修改", "删除"};
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("请选择操作");
+            builder.setItems(options, (dialog, which) -> {
+                switch (which) {
+                    case 0: // 取消
+                        dialog.dismiss();
+                        break;
+                    case 1: // 修改
+                        showEditPlateDialog(selectedPlate);
+                        break;
+                    case 2: // 删除
+                        showDeleteConfirmDialog(selectedPlate);
+                        break;
+                }
+            });
+            builder.show();
             return true;
         });
 
@@ -99,7 +115,6 @@ public class PlateListActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("手动添加车牌");
 
-        // 自定义dialog布局
         final android.view.View dialogView = getLayoutInflater().inflate(R.layout.dialog_add_plate, null);
         final EditText editPlateCode = dialogView.findViewById(R.id.edit_plate_code);
         final EditText editPlateType = dialogView.findViewById(R.id.edit_plate_type);
@@ -116,7 +131,7 @@ public class PlateListActivity extends AppCompatActivity {
             entity.setPlateCode(code);
             entity.setPlateType(TextUtils.isEmpty(type) ? "无备注" : type);
             entity.setTimestamp(String.valueOf(System.currentTimeMillis()));
-            entity.setImagePath(""); // 手动添加没有图片
+            entity.setImagePath("");
             new Thread(() -> {
                 PlateDatabase.getInstance(getApplicationContext()).plateDao().insertPlate(entity);
                 runOnUiThread(() -> {
@@ -125,6 +140,53 @@ public class PlateListActivity extends AppCompatActivity {
                 });
             }).start();
         });
+        builder.setNegativeButton("取消", null);
+        builder.show();
+    }
+
+    // 新增：编辑车牌对话框
+    private void showEditPlateDialog(PlateEntity plate) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("修改车牌信息");
+
+        final android.view.View dialogView = getLayoutInflater().inflate(R.layout.dialog_add_plate, null);
+        final EditText editPlateCode = dialogView.findViewById(R.id.edit_plate_code);
+        final EditText editPlateType = dialogView.findViewById(R.id.edit_plate_type);
+
+        // 设置原有内容
+        editPlateCode.setText(plate.getPlateCode());
+        editPlateType.setText(plate.getPlateType());
+
+        builder.setView(dialogView);
+
+        builder.setPositiveButton("保存", (dialog, which) -> {
+            String newCode = editPlateCode.getText().toString().trim().toUpperCase();
+            String newType = editPlateType.getText().toString().trim();
+            if (TextUtils.isEmpty(newCode)) {
+                Toast.makeText(this, "车牌号不能为空", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            plate.setPlateCode(newCode);
+            plate.setPlateType(TextUtils.isEmpty(newType) ? "无备注" : newType);
+            // 时间不能修改
+            new Thread(() -> {
+                PlateDatabase.getInstance(getApplicationContext()).plateDao().updatePlate(plate);
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "修改成功", Toast.LENGTH_SHORT).show();
+                    loadPlateData(searchEditText.getText().toString());
+                });
+            }).start();
+        });
+        builder.setNegativeButton("取消", null);
+        builder.show();
+    }
+
+    // 新增：删除确认对话框
+    private void showDeleteConfirmDialog(PlateEntity plate) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("确认删除");
+        builder.setMessage("确定要删除 [" + plate.getPlateCode() + "] 这条记录吗？");
+        builder.setPositiveButton("删除", (dialog, which) -> deletePlate(plate));
         builder.setNegativeButton("取消", null);
         builder.show();
     }

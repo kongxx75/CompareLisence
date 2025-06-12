@@ -23,8 +23,8 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * @author by hs-johnny
- * Created on 2019/6/17
+ * @author by kieran
+ * Created on 2025/6/10
  */
 public class CameraPreviews extends SurfaceView implements SurfaceHolder.Callback, Camera.PreviewCallback {
 
