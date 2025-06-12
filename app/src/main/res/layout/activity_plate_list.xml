@@ -9,7 +9,7 @@
         android:id="@+id/searchEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="输入车牌号查询"
+        android:hint="输入查询信息"
         android:drawableLeft="@android:drawable/ic_menu_search"
         android:padding="8dp"
         android:background="@android:drawable/edit_text" />
