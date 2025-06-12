@@ -31,6 +31,8 @@ public class MainActivity extends AppCompatActivity {
 
     private Button cameraBtn;
     private Button albumBtn;
+    // 新增：本地车牌库按钮
+    private Button databaseBtn;
     private Context mCtx;
     private static final int REQUEST_LIST_CODE = 0;
     private static final int REQUEST_CAMERA_CODE = 1;
@@ -74,6 +76,9 @@ public class MainActivity extends AppCompatActivity {
         albumBtn = findViewById(R.id.albumBtn);
         imageView = findViewById(R.id.imageView);
         mResult = findViewById(R.id.mResult);
+
+        // 新增：初始化本地车牌库按钮（需确保activity_main.xml中有databaseBtn）
+        databaseBtn = findViewById(R.id.databaseBtn);
 
         verifyStoragePermissions(this);
 
@@ -138,8 +143,15 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // 新增：本地车牌库按钮事件
+        databaseBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(MainActivity.this, PlateListActivity.class);
+                MainActivity.this.startActivity(intent);
+            }
+        });
     }
-
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -151,26 +163,53 @@ public class MainActivity extends AppCompatActivity {
             List<String> pathList = data.getStringArrayListExtra("result");
             Log.i(TAG, pathList.get(0));
             bitmap = BitmapFactory.decodeFile(pathList.get(0));
+            if (bitmap != null && pathList.size() > 0) {
+                // 处理图片并存库
+                processAndSavePlate(bitmap, pathList.get(0));
+            }
         }  else if (requestCode == REQUEST_CAMERA_CODE && resultCode == RESULT_OK && data != null) {
             String path = data.getStringExtra("result");
             Log.i(TAG, path);
             bitmap = BitmapFactory.decodeFile(path);
-        }
-        if (bitmap != null) {
-
-            imageView.setImageBitmap(bitmap);
-            // 调用车牌识别
-            Plate[] plates =  HyperLPR3.getInstance().plateRecognition(bitmap, HyperLPR3.CAMERA_ROTATION_0, HyperLPR3.STREAM_BGRA);
-            for (Plate plate: plates) {
-                String type = "未知车牌";
-                if (plate.getType() != HyperLPR3.PLATE_TYPE_UNKNOWN) {
-                    type = HyperLPR3.PLATE_TYPE_MAPS[plate.getType()];
-                }
-                String pStr = "[" + type + "]" + plate.getCode() + "\n";
-                showText += pStr;
-                mResult.setText(showText);
-
+            if (bitmap != null && path != null) {
+                processAndSavePlate(bitmap, path);
             }
         }
+        // 若未识别则显示原逻辑
+        if (bitmap != null && showText.isEmpty()) {
+            imageView.setImageBitmap(bitmap);
+        }
+    }
+
+    // 新增：识别车牌并保存到数据库
+    private void processAndSavePlate(Bitmap bitmap, String imagePath) {
+        imageView.setImageBitmap(bitmap);
+        String showText = "";
+        // 调用车牌识别
+        Plate[] plates = HyperLPR3.getInstance().plateRecognition(bitmap, HyperLPR3.CAMERA_ROTATION_0, HyperLPR3.STREAM_BGRA);
+        for (Plate plate : plates) {
+            String type = "未知车牌";
+            if (plate.getType() != HyperLPR3.PLATE_TYPE_UNKNOWN) {
+                type = HyperLPR3.PLATE_TYPE_MAPS[plate.getType()];
+            }
+            String pStr = "[" + type + "]" + plate.getCode() + "\n";
+            showText += pStr;
+            // 保存到数据库
+            saveToDatabase(plate, type, imagePath);
+        }
+        mResult.setText(showText);
+    }
+
+    // 新增：保存车牌信息到数据库
+    private void saveToDatabase(Plate plate, String plateType, String imagePath) {
+        PlateEntity entity = new PlateEntity();
+        entity.setPlateCode(plate.getCode());
+        entity.setPlateType(plateType);
+        entity.setTimestamp(String.valueOf(System.currentTimeMillis()));
+        entity.setImagePath(imagePath);
+
+        new Thread(() -> {
+            PlateDatabase.getInstance(getApplicationContext()).plateDao().insertPlate(entity);
+        }).start();
     }
 }

@@ -7,6 +7,12 @@
     tools:context=".MainActivity">
 
     <Button
+        android:id="@+id/databaseBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="本地车牌库" />
+
+    <Button
         android:id="@+id/albumBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

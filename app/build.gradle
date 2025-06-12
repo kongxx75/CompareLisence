@@ -4,12 +4,12 @@ plugins {
 
 android {
     namespace 'com.hyperai.example.lpr3_demo'
-    compileSdk 31
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.hyperai.example.lpr3_demo"
         minSdk 21
-        targetSdk 31
+        targetSdk 34
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -40,4 +40,7 @@ dependencies {
     testImplementation 'junit:junit:4.+'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+
+    implementation "androidx.room:room-runtime:2.5.2"
+    annotationProcessor "androidx.room:room-compiler:2.5.2" // 如果使用 Kotlin，替换为 kapt
 }
