@@ -2,13 +2,20 @@ package com.hyperai.example.lpr3_demo;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.os.Bundle;
+import android.text.InputType;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.hyperai.hyperlpr3.HyperLPR3;
 import com.hyperai.hyperlpr3.bean.Plate;
 
@@ -22,6 +29,7 @@ import java.util.Locale;
 
 /**
  * 实时车牌识别，自动与本地库比对，显示录入时间和备注
+ * 新增功能：右下角保存按钮，识别到车牌后可保存到本地库并支持备注
  */
 public class CameraActivity extends Activity {
 
@@ -30,6 +38,10 @@ public class CameraActivity extends Activity {
     TextView plateTv;
     ImageView image;
     TextView matchTipTv;
+    FloatingActionButton fabSavePlate;
+
+    // 用于保存最新识别到的车牌
+    private Plate lastRecognizedPlate;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,6 +51,16 @@ public class CameraActivity extends Activity {
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_camera);
         matchTipTv = findViewById(R.id.match_tip_tv);
+        fabSavePlate = findViewById(R.id.fabSavePlate);
+
+        // 保存按钮点击事件
+        fabSavePlate.setOnClickListener(v -> {
+            if (lastRecognizedPlate == null) {
+                Toast.makeText(this, "暂无可保存的车牌", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            showSavePlateDialog(lastRecognizedPlate);
+        });
     }
 
     private void initCamera() {
@@ -104,6 +126,7 @@ public class CameraActivity extends Activity {
         // 只匹配第一个车牌
         if (plates.length > 0) {
             Plate plate = plates[0];
+            lastRecognizedPlate = plate; // 保存最新识别到的车牌
             String type = "未知车牌";
             if (plate.getType() != HyperLPR3.PLATE_TYPE_UNKNOWN) {
                 type = HyperLPR3.PLATE_TYPE_MAPS[plate.getType()];
@@ -112,6 +135,7 @@ public class CameraActivity extends Activity {
             String pureCode = extractPlateCode(codeWithType);
             checkPlateWithLocalDb(pureCode);
         } else {
+            lastRecognizedPlate = null;
             matchTipTv.setText("");
         }
     }
@@ -144,5 +168,38 @@ public class CameraActivity extends Activity {
                 }
             });
         }).start();
+    }
+
+    /**
+     * 保存车牌弹窗，支持备注和显示时间
+     */
+    private void showSavePlateDialog(Plate plate) {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_save_plate, null);
+        EditText etRemark = dialogView.findViewById(R.id.etRemark);
+        EditText etTime = dialogView.findViewById(R.id.etTime);
+
+        String now = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+        etTime.setText(now);
+        etTime.setEnabled(false);
+
+        new AlertDialog.Builder(this)
+                .setTitle("保存车牌")
+                .setView(dialogView)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("保存", (dialog, which) -> {
+                    String remark = etRemark.getText().toString().trim();
+                    String time = String.valueOf(System.currentTimeMillis());
+
+                    PlateEntity entity = new PlateEntity();
+                    entity.setPlateCode(plate.getCode());
+                    entity.setPlateType(remark); // 备注
+                    entity.setTimestamp(time);
+
+                    new Thread(() -> {
+                        PlateDatabase.getInstance(getApplicationContext()).plateDao().insertPlate(entity);
+                        runOnUiThread(() -> Toast.makeText(this, "保存成功", Toast.LENGTH_SHORT).show());
+                    }).start();
+                })
+                .show();
     }
 }
