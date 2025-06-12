@@ -20,6 +20,8 @@ public interface PlateDao {
     List<PlateEntity> getAllPlates();
     @Query("SELECT * FROM plates WHERE plateCode LIKE :query OR plateType LIKE :query OR timestamp LIKE :query ORDER BY timestamp DESC")
     List<PlateEntity> searchPlates(String query);
+    @Query("SELECT * FROM plates WHERE plateCode = :plateCode LIMIT 1")
+    PlateEntity findPlateByCode(String plateCode);
 
 
 }
