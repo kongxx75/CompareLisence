@@ -43,4 +43,6 @@ dependencies {
 
     implementation "androidx.room:room-runtime:2.5.2"
     annotationProcessor "androidx.room:room-compiler:2.5.2" // 如果使用 Kotlin，替换为 kapt
+
+    implementation 'com.google.android.material:material:1.10.0'
 }

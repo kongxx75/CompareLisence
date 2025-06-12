@@ -30,4 +30,15 @@
         android:layout_weight="1"
         android:divider="@android:color/darker_gray"
         android:dividerHeight="1dp"/>
+
+    <!-- 加号悬浮按钮 -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_add"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end|bottom"
+        android:layout_margin="16dp"
+        android:src="@android:drawable/ic_input_add"
+        android:contentDescription="添加车牌" />
+
 </LinearLayout>

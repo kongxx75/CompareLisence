@@ -3,6 +3,7 @@ package com.hyperai.example.lpr3_demo;
 import android.app.AlertDialog;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.widget.AdapterView;
 import android.widget.EditText;
@@ -11,6 +12,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.List;
 
@@ -21,6 +24,7 @@ public class PlateListActivity extends AppCompatActivity {
     private EditText searchEditText;
     private TextView emptyTextView;
     private List<PlateEntity> plates;
+    private FloatingActionButton fabAdd;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,6 +34,7 @@ public class PlateListActivity extends AppCompatActivity {
         listView = findViewById(R.id.plate_list);
         searchEditText = findViewById(R.id.searchEditText);
         emptyTextView = findViewById(R.id.emptyTextView);
+        fabAdd = findViewById(R.id.fab_add);
 
         loadPlateData(null);
 
@@ -53,6 +58,9 @@ public class PlateListActivity extends AppCompatActivity {
                     .show();
             return true;
         });
+
+        // 添加车牌功能
+        fabAdd.setOnClickListener(v -> showAddPlateDialog());
     }
 
     private void loadPlateData(String query) {
@@ -84,5 +92,40 @@ public class PlateListActivity extends AppCompatActivity {
                 loadPlateData(searchEditText.getText().toString());
             });
         }).start();
+    }
+
+    // 新增：手动添加车牌对话框
+    private void showAddPlateDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("手动添加车牌");
+
+        // 自定义dialog布局
+        final android.view.View dialogView = getLayoutInflater().inflate(R.layout.dialog_add_plate, null);
+        final EditText editPlateCode = dialogView.findViewById(R.id.edit_plate_code);
+        final EditText editPlateType = dialogView.findViewById(R.id.edit_plate_type);
+        builder.setView(dialogView);
+
+        builder.setPositiveButton("添加", (dialog, which) -> {
+            String code = editPlateCode.getText().toString().trim().toUpperCase();
+            String type = editPlateType.getText().toString().trim();
+            if (TextUtils.isEmpty(code)) {
+                Toast.makeText(this, "车牌号不能为空", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            PlateEntity entity = new PlateEntity();
+            entity.setPlateCode(code);
+            entity.setPlateType(TextUtils.isEmpty(type) ? "未知类型" : type);
+            entity.setTimestamp(String.valueOf(System.currentTimeMillis()));
+            entity.setImagePath(""); // 手动添加没有图片
+            new Thread(() -> {
+                PlateDatabase.getInstance(getApplicationContext()).plateDao().insertPlate(entity);
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "添加成功", Toast.LENGTH_SHORT).show();
+                    loadPlateData(searchEditText.getText().toString());
+                });
+            }).start();
+        });
+        builder.setNegativeButton("取消", null);
+        builder.show();
     }
 }
