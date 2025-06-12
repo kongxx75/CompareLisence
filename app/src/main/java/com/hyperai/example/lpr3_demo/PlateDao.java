@@ -18,4 +18,6 @@ public interface PlateDao {
     void deletePlate(PlateEntity plate);
     @Query("SELECT * FROM plates ORDER BY timestamp DESC")
     List<PlateEntity> getAllPlates();
+    @Query("SELECT * FROM plates WHERE plateCode LIKE :query ORDER BY timestamp DESC")
+    List<PlateEntity> searchPlates(String query);
 }
