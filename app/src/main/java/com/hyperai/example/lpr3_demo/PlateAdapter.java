@@ -7,7 +7,10 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class PlateAdapter extends BaseAdapter {
 
@@ -46,8 +49,19 @@ public class PlateAdapter extends BaseAdapter {
 
         PlateEntity plate = plates.get(position);
         plateCode.setText("车牌号: " + plate.getPlateCode());
-        plateType.setText("车牌类型: " + plate.getPlateType());
-        timestamp.setText("识别时间: " + plate.getTimestamp());
+        plateType.setText("备注: " + plate.getPlateType());
+
+        // 格式化时间戳为人类可读格式
+        String timeStr = plate.getTimestamp();
+        String formattedTime;
+        try {
+            long millis = Long.parseLong(timeStr);
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+            formattedTime = sdf.format(new Date(millis));
+        } catch (Exception e) {
+            formattedTime = timeStr; // fallback
+        }
+        timestamp.setText("识别时间: " + formattedTime);
 
         return convertView;
     }

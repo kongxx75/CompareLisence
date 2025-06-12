@@ -114,7 +114,7 @@ public class PlateListActivity extends AppCompatActivity {
             }
             PlateEntity entity = new PlateEntity();
             entity.setPlateCode(code);
-            entity.setPlateType(TextUtils.isEmpty(type) ? "未知类型" : type);
+            entity.setPlateType(TextUtils.isEmpty(type) ? "无备注" : type);
             entity.setTimestamp(String.valueOf(System.currentTimeMillis()));
             entity.setImagePath(""); // 手动添加没有图片
             new Thread(() -> {
