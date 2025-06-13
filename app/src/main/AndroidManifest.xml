@@ -8,6 +8,12 @@
     <!-- 4.2以上的手机需要的权限 -->
     <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL"
         tools:ignore="ProtectedPermissions" />
+    <!--照片-->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!--视频-->
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <!--音频-->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.RESTART_PACKAGES" />
     <!-- 访问INTERNET的权限 -->
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>

@@ -10,7 +10,11 @@
         android:id="@+id/databaseBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="本地车牌库" />
+        android:layout_marginEnd="232dp"
+        android:layout_marginBottom="116dp"
+        android:text="本地车牌库"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <Button
         android:id="@+id/albumBtn"
@@ -45,19 +49,19 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.227"
-        tools:srcCompat="@tools:sample/avatars" />
+        android:src="@drawable/test" />
 
     <TextView
         android:id="@+id/mResult"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text=""
+        android:layout_width="202dp"
+        android:layout_height="34dp"
+        android:text="欢迎使用车牌识别助手"
         android:textSize="20sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.233"
+        app:layout_constraintHorizontal_bias="0.497"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/imageView"
-        app:layout_constraintVertical_bias="0.079" />
+        app:layout_constraintVertical_bias="0.077" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
