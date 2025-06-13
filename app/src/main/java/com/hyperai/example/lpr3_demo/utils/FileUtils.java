@@ -1,6 +1,8 @@
 package com.hyperai.example.lpr3_demo.utils;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 public class FileUtils {
     public static void copyStream(InputStream in, OutputStream out) throws IOException {
