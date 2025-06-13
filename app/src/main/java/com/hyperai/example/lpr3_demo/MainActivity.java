@@ -7,11 +7,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.Color;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -21,19 +20,21 @@ import android.widget.Toast;
 import com.hyperai.hyperlpr3.HyperLPR3;
 import com.hyperai.hyperlpr3.bean.HyperLPRParameter;
 import com.hyperai.hyperlpr3.bean.Plate;
+import com.hyperai.example.lpr3_demo.utils.PermissionUtils;
 
 public class MainActivity extends AppCompatActivity {
 
     private Button cameraBtn;
     private Button albumBtn;
     private Button databaseBtn;
+    private Button exportBtn;
+    private Button importBtn;
     private Context mCtx;
     private static final int REQUEST_CAMERA_CODE = 1;
     private final String TAG = "HyperLPR-App";
     private ImageView imageView;
     private TextView mResult;
 
-    // 新增：系统图片选择器
     private ActivityResultLauncher<Intent> pickPhotoLauncher;
 
     @Override
@@ -47,6 +48,11 @@ public class MainActivity extends AppCompatActivity {
         mResult = findViewById(R.id.mResult);
         databaseBtn = findViewById(R.id.databaseBtn);
 
+        exportBtn = findViewById(R.id.exportBtn);    // 新增
+        importBtn = findViewById(R.id.importBtn);    // 新增
+
+        PermissionUtils.checkAndRequestPermissions(this);
+
         // 初始化车牌识别算法参数
         HyperLPRParameter parameter = new HyperLPRParameter()
                 .setDetLevel(HyperLPR3.DETECT_LEVEL_LOW)
@@ -54,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
                 .setRecConfidenceThreshold(0.85f);
         HyperLPR3.getInstance().init(this, parameter);
 
-        // 注册系统图片选择器回调
+        // 注册图片选择回调
         pickPhotoLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
@@ -88,9 +94,11 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(MainActivity.this, PlateListActivity.class);
             MainActivity.this.startActivity(intent);
         });
+
+        exportBtn.setOnClickListener(v -> com.hyperai.example.lpr3_demo.utils.FileUtils.exportDatabase(this));
+        importBtn.setOnClickListener(v -> com.hyperai.example.lpr3_demo.utils.FileUtils.importDatabase(this));
     }
 
-    // 识别车牌并保存到数据库
     private void processAndSavePlate(Bitmap bitmap, String imagePath) {
         imageView.setImageBitmap(bitmap);
         StringBuilder showText = new StringBuilder();
@@ -107,7 +115,6 @@ public class MainActivity extends AppCompatActivity {
         mResult.setText(showText.toString());
     }
 
-    // 保存车牌信息到数据库
     private void saveToDatabase(Plate plate, String plateType, String imagePath) {
         PlateEntity entity = new PlateEntity();
         entity.setPlateCode(plate.getCode());
@@ -116,7 +123,11 @@ public class MainActivity extends AppCompatActivity {
         entity.setImagePath(imagePath);
 
         new Thread(() -> {
-            PlateDatabase.getInstance(getApplicationContext()).plateDao().insertPlate(entity);
+            try {
+                PlateDatabase.getInstance(getApplicationContext()).plateDao().insertPlate(entity);
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(this, "写入数据库异常: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+            }
         }).start();
     }
 }
