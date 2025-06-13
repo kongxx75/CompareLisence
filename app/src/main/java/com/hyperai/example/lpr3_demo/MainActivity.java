@@ -2,6 +2,7 @@ package com.hyperai.example.lpr3_demo;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
@@ -10,8 +11,6 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.util.DisplayMetrics;
-import android.util.Log;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -21,6 +20,13 @@ import com.hyperai.hyperlpr3.HyperLPR3;
 import com.hyperai.hyperlpr3.bean.HyperLPRParameter;
 import com.hyperai.hyperlpr3.bean.Plate;
 import com.hyperai.example.lpr3_demo.utils.PermissionUtils;
+import com.hyperai.example.lpr3_demo.utils.FileUtils;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -35,7 +41,12 @@ public class MainActivity extends AppCompatActivity {
     private ImageView imageView;
     private TextView mResult;
 
+    // 新增：系统图片选择器
     private ActivityResultLauncher<Intent> pickPhotoLauncher;
+
+    // 新增：导入导出代码
+    private static final int REQ_EXPORT_DB = 1001;
+    private static final int REQ_IMPORT_DB = 1002;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,8 +59,8 @@ public class MainActivity extends AppCompatActivity {
         mResult = findViewById(R.id.mResult);
         databaseBtn = findViewById(R.id.databaseBtn);
 
-        exportBtn = findViewById(R.id.exportBtn);    // 新增
-        importBtn = findViewById(R.id.importBtn);    // 新增
+        exportBtn = findViewById(R.id.exportBtn);
+        importBtn = findViewById(R.id.importBtn);
 
         PermissionUtils.checkAndRequestPermissions(this);
 
@@ -60,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
                 .setRecConfidenceThreshold(0.85f);
         HyperLPR3.getInstance().init(this, parameter);
 
-        // 注册图片选择回调
+        // 注册系统图片选择器回调
         pickPhotoLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
@@ -95,10 +106,11 @@ public class MainActivity extends AppCompatActivity {
             MainActivity.this.startActivity(intent);
         });
 
-        exportBtn.setOnClickListener(v -> com.hyperai.example.lpr3_demo.utils.FileUtils.exportDatabase(this));
-        importBtn.setOnClickListener(v -> com.hyperai.example.lpr3_demo.utils.FileUtils.importDatabase(this));
+        exportBtn.setOnClickListener(v -> exportDatabase());
+        importBtn.setOnClickListener(v -> importDatabase());
     }
 
+    // 识别车牌并保存到数据库
     private void processAndSavePlate(Bitmap bitmap, String imagePath) {
         imageView.setImageBitmap(bitmap);
         StringBuilder showText = new StringBuilder();
@@ -115,6 +127,7 @@ public class MainActivity extends AppCompatActivity {
         mResult.setText(showText.toString());
     }
 
+    // 保存车牌信息到数据库
     private void saveToDatabase(Plate plate, String plateType, String imagePath) {
         PlateEntity entity = new PlateEntity();
         entity.setPlateCode(plate.getCode());
@@ -129,5 +142,52 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(() -> Toast.makeText(this, "写入数据库异常: " + e.getMessage(), Toast.LENGTH_SHORT).show());
             }
         }).start();
+    }
+
+    // ======= 导入导出相关 =======
+    // 导出（让用户选择保存路径）
+    private void exportDatabase() {
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.setType("*/*");
+        intent.putExtra(Intent.EXTRA_TITLE, "plate_database.db");
+        startActivityForResult(intent, REQ_EXPORT_DB);
+    }
+
+    // 导入（让用户选择数据库文件）
+    private void importDatabase() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.setType("*/*");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        startActivityForResult(intent, REQ_IMPORT_DB);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
+
+        if (requestCode == REQ_EXPORT_DB) {
+            // 导出
+            try {
+                File dbFile = getDatabasePath("plate_database");
+                InputStream in = new FileInputStream(dbFile);
+                OutputStream out = getContentResolver().openOutputStream(data.getData());
+                FileUtils.copyStream(in, out);
+                Toast.makeText(this, "导出成功", Toast.LENGTH_LONG).show();
+            } catch (Exception e) {
+                Toast.makeText(this, "导出失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        } else if (requestCode == REQ_IMPORT_DB) {
+            // 导入
+            try {
+                InputStream in = getContentResolver().openInputStream(data.getData());
+                File dbFile = getDatabasePath("plate_database");
+                OutputStream out = new FileOutputStream(dbFile, false);
+                FileUtils.copyStream(in, out);
+                Toast.makeText(this, "导入成功，重启App生效", Toast.LENGTH_LONG).show();
+            } catch (Exception e) {
+                Toast.makeText(this, "导入失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        }
     }
 }
