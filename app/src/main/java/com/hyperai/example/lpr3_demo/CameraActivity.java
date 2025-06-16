@@ -2,12 +2,12 @@ package com.hyperai.example.lpr3_demo;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Vibrator;
 import android.text.InputType;
 import android.view.LayoutInflater;
@@ -29,6 +29,7 @@ import com.hyperai.hyperlpr3.bean.Plate;
 import com.hyperai.example.lpr3_demo.camera.CameraViewModel;
 import com.hyperai.example.lpr3_demo.utils.BitmapUtils;
 import com.hyperai.example.lpr3_demo.utils.PermissionUtils;
+import com.hyperai.example.lpr3_demo.utils.WxPusherUtils;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -41,13 +42,10 @@ import java.util.Locale;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-/**
- * 实时车牌识别，自动与本地库比对，显示录入时间和备注
- * 新增功能：
- * - 保存按钮可保存图片当前帧及车牌信息
- * - 识别命中本地库时震动提示
- * - 所有数据库/摄像头try-catch防止闪退
- */
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Response;
+
 public class CameraActivity extends AppCompatActivity {
 
     FrameLayout previewFl;
@@ -63,6 +61,7 @@ public class CameraActivity extends AppCompatActivity {
     private Bitmap lastFrameBitmap;
 
     private CameraViewModel viewModel;
+    private String lastPushedPlate = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,7 +80,6 @@ public class CameraActivity extends AppCompatActivity {
         viewModel = new ViewModelProvider(this).get(CameraViewModel.class);
         viewModel.getLastFrameBitmap().observe(this, bitmap -> lastFrameBitmap = bitmap);
 
-        // 保存按钮点击事件
         fabSavePlate.setOnClickListener(v -> {
             if (lastRecognizedPlate == null) {
                 Toast.makeText(this, "暂无可保存的车牌", Toast.LENGTH_SHORT).show();
@@ -129,9 +127,7 @@ public class CameraActivity extends AppCompatActivity {
         EventBus.getDefault().unregister(this);
     }
 
-    /**
-     * 提取纯车牌号，比如【蓝牌】京A66666 -> 京A66666
-     */
+    // 提取纯车牌号，比如【蓝牌】京A66666 -> 京A66666
     private String extractPlateCode(String raw) {
         if (raw == null) return "";
         return raw.replaceAll("^[\\[【][^\\]】]+[\\]】]", "").trim();
@@ -167,9 +163,7 @@ public class CameraActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * 比对数据库，命中时震动
-     */
+    // 比对数据库，命中时震动+弹窗推送
     private void checkPlateWithLocalDb(String recognizedCode) {
         new Thread(() -> {
             PlateDao dao = PlateDatabase.getInstance(getApplicationContext()).plateDao();
@@ -196,6 +190,9 @@ public class CameraActivity extends AppCompatActivity {
                             + "\n备注：" + finalEntity.getPlateType());
                     matchTipTv.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
                     vibrateOnce(this);
+
+                    // 命中后弹窗推送
+                    onPlateMatched(lastRecognizedPlate, finalEntity.getPlateType(), "休息片刻");
                 } else {
                     matchTipTv.setText("未在本地库中找到该车牌");
                     matchTipTv.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
@@ -204,9 +201,7 @@ public class CameraActivity extends AppCompatActivity {
         }).start();
     }
 
-    /**
-     * 震动一次
-     */
+    // 震动一次
     private void vibrateOnce(Context context) {
         try {
             Vibrator vibrator = (Vibrator) context.getSystemService(VIBRATOR_SERVICE);
@@ -218,9 +213,7 @@ public class CameraActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * 保存车牌弹窗，支持备注和显示时间，并保存当前帧图片
-     */
+    // 保存车牌弹窗，支持备注和显示时间，并保存当前帧图片到系统相册
     private void showSavePlateDialog(Plate plate, Bitmap frameBitmap) {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_save_plate, null);
         EditText etRemark = dialogView.findViewById(R.id.etRemark);
@@ -239,10 +232,10 @@ public class CameraActivity extends AppCompatActivity {
                     String time = String.valueOf(System.currentTimeMillis());
                     String imagePath = "";
 
-                    // 保存当前帧
+                    // 保存当前帧到系统相册
                     if (frameBitmap != null) {
                         try {
-                            File file = BitmapUtils.saveBitmapToAppDir(this, frameBitmap);
+                            File file = BitmapUtils.saveBitmapToPlateDir(this, frameBitmap);
                             imagePath = file != null ? file.getAbsolutePath() : "";
                         } catch (Exception e) {
                             Toast.makeText(this, "图片保存失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -265,5 +258,49 @@ public class CameraActivity extends AppCompatActivity {
                     }).start();
                 })
                 .show();
+    }
+
+    // 命中后弹窗推送
+    private void onPlateMatched(Plate plate, String remark, String customText) {
+        if (plate == null) return;
+        String plateCode = plate.getCode();
+        if (plateCode.equals(lastPushedPlate)) return;
+        lastPushedPlate = plateCode;
+
+        new Handler(getMainLooper()).postDelayed(() -> {
+            showSendNotifyDialog(plateCode, remark, customText);
+        }, 500);
+    }
+
+    // 弹窗提示是否发送微信通知
+    private void showSendNotifyDialog(String plate, String remark, String customText) {
+        String timeStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+        StringBuilder content = new StringBuilder();
+        content.append(timeStr)
+                .append("，识别到车牌").append(plate);
+        if (remark != null && !remark.isEmpty()) {
+            content.append("，").append(remark);
+        }
+        if (customText != null && !customText.isEmpty()) {
+            content.append("，").append(customText);
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("是否发送通知？")
+                .setMessage(content.toString())
+                .setCancelable(false)
+                .setPositiveButton("是", (dialog, which) -> {
+                    WxPusherUtils.sendMessage(content.toString(), new Callback() {
+                        @Override public void onFailure(Call call, java.io.IOException e) {
+                            runOnUiThread(() -> Toast.makeText(CameraActivity.this, "消息发送失败", Toast.LENGTH_SHORT).show());
+                        }
+                        @Override public void onResponse(Call call, Response response) {
+                            runOnUiThread(() -> Toast.makeText(CameraActivity.this, "消息已发送", Toast.LENGTH_SHORT).show());
+                        }
+                    });
+                    dialog.dismiss();
+                })
+                .setNegativeButton("否", (dialog, which) -> dialog.dismiss());
+        builder.show();
     }
 }
