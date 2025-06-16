@@ -1,7 +1,6 @@
 package com.hyperai.example.lpr3_demo;
 
 import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
@@ -79,10 +78,7 @@ public class PlateListActivity extends AppCompatActivity {
         // 单击车牌项，进入图片展示页面
         listView.setOnItemClickListener((parent, view, position, id) -> {
             PlateEntity selectedPlate = plates.get(position);
-            Intent intent = new Intent(this, PlateImageActivity.class);
-            intent.putExtra("plate_code", selectedPlate.getPlateCode());
-            intent.putExtra("image_path", selectedPlate.getImagePath());
-            startActivity(intent);
+            PlateImageActivity.start(this, selectedPlate.getPlateCode(), selectedPlate.getImagePath());
         });
 
         // 添加车牌功能

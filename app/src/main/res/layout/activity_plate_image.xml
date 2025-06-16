@@ -4,10 +4,10 @@
     android:layout_height="match_parent"
     android:padding="24dp">
 
-    <ImageView
-        android:id="@+id/imageView"
+    <com.github.chrisbanes.photoview.PhotoView
+        android:id="@+id/photoView"
         android:layout_width="match_parent"
-        android:layout_height="300dp"
+        android:layout_height="400dp"
         android:scaleType="fitCenter"
         android:contentDescription="关键帧图片" />
 
