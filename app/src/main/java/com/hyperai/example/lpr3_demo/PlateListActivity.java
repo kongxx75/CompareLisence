@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import java.io.File;
 import java.util.List;
 
 public class PlateListActivity extends AppCompatActivity {
@@ -75,10 +76,16 @@ public class PlateListActivity extends AppCompatActivity {
             return true;
         });
 
-        // 单击车牌项，进入图片展示页面
+        // 单击车牌项，进入图片展示页面（优化：无图则弹窗提示）
         listView.setOnItemClickListener((parent, view, position, id) -> {
             PlateEntity selectedPlate = plates.get(position);
-            PlateImageActivity.start(this, selectedPlate.getPlateCode(), selectedPlate.getImagePath());
+            String imagePath = selectedPlate.getImagePath();
+            File imgFile = (imagePath != null && !imagePath.isEmpty()) ? new File(imagePath) : null;
+            if (imgFile != null && imgFile.exists()) {
+                PlateImageActivity.start(this, selectedPlate.getPlateCode(), imagePath);
+            } else {
+                Toast.makeText(this, "无相关的图片", Toast.LENGTH_SHORT).show();
+            }
         });
 
         // 添加车牌功能
@@ -108,6 +115,17 @@ public class PlateListActivity extends AppCompatActivity {
 
     private void deletePlate(PlateEntity plate) {
         new Thread(() -> {
+            // 先删除本地图片（如果有）
+            String imagePath = plate.getImagePath();
+            if (imagePath != null && !imagePath.isEmpty()) {
+                File imgFile = new File(imagePath);
+                if (imgFile.exists()) {
+                    imgFile.delete();
+                    // 通知媒体库刷新（可选）
+                    sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, android.net.Uri.fromFile(imgFile)));
+                }
+            }
+            // 删除数据库记录
             PlateDatabase.getInstance(getApplicationContext()).plateDao().deletePlate(plate);
             runOnUiThread(() -> {
                 Toast.makeText(this, "已删除", Toast.LENGTH_SHORT).show();
