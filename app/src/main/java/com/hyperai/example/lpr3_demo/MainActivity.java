@@ -1,5 +1,6 @@
 package com.hyperai.example.lpr3_demo;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
@@ -19,11 +20,12 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.hyperai.example.lpr3_demo.utils.PermissionUtils;
+import com.hyperai.example.lpr3_demo.utils.FileUtils;
+import com.hyperai.example.lpr3_demo.utils.UserManager;
 import com.hyperai.hyperlpr3.HyperLPR3;
 import com.hyperai.hyperlpr3.bean.HyperLPRParameter;
 import com.hyperai.hyperlpr3.bean.Plate;
-import com.hyperai.example.lpr3_demo.utils.PermissionUtils;
-import com.hyperai.example.lpr3_demo.utils.FileUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -38,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private Button databaseBtn;
     private Button exportBtn;
     private Button importBtn;
+    private Button loginBtn;
     private Context mCtx;
     private static final int REQUEST_CAMERA_CODE = 1;
     private ImageView imageView;
@@ -61,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
         databaseBtn = findViewById(R.id.databaseBtn);
         exportBtn = findViewById(R.id.exportBtn);
         importBtn = findViewById(R.id.importBtn);
+        loginBtn = findViewById(R.id.loginBtn);
 
         PermissionUtils.checkAndRequestPermissions(this);
 
@@ -107,6 +111,42 @@ public class MainActivity extends AppCompatActivity {
 
         exportBtn.setOnClickListener(v -> exportDatabase());
         importBtn.setOnClickListener(v -> importDatabase());
+
+        // 登录/注册按钮相关
+        refreshLoginBtn(loginBtn);
+        loginBtn.setOnClickListener(v -> {
+            if (UserManager.isLoggedIn(this)) {
+                // 已登录，弹窗确认退出
+                new AlertDialog.Builder(this)
+                        .setTitle("退出登录")
+                        .setMessage("确定要退出登录吗？")
+                        .setPositiveButton("退出", (dialog, which) -> {
+                            UserManager.logout(this);
+                            Toast.makeText(this, "已退出登录", Toast.LENGTH_SHORT).show();
+                            refreshLoginBtn(loginBtn);
+                        })
+                        .setNegativeButton("取消", null)
+                        .show();
+            } else {
+                // 未登录，跳转登录注册
+                startActivity(new Intent(this, LoginRegisterActivity.class));
+            }
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        refreshLoginBtn(loginBtn);
+    }
+
+    private void refreshLoginBtn(Button loginBtn) {
+        String user = UserManager.getLoginUser(this);
+        if (user != null) {
+            loginBtn.setText("已登录: " + user);
+        } else {
+            loginBtn.setText("登录/注册");
+        }
     }
 
     // 识别车牌并保存到数据库

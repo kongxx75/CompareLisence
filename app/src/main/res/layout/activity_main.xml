@@ -11,7 +11,9 @@
         app:alignmentMode="alignMargins"
         app:columnCount="2"
         app:rowCount="3"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -19,72 +21,98 @@
         <Button
             android:id="@+id/cameraBtn"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:text="实时车牌识别"
             app:layout_row="0"
             app:layout_column="0"
             app:layout_columnWeight="1"
-            android:layout_margin="8dp"/>
+            android:layout_margin="8dp"
+            android:textAllCaps="false"/>
 
         <Button
             android:id="@+id/albumBtn"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:text="选择图片识别"
             app:layout_row="0"
             app:layout_column="1"
             app:layout_columnWeight="1"
-            android:layout_margin="8dp"/>
+            android:layout_margin="8dp"
+            android:textAllCaps="false"/>
 
         <Button
             android:id="@+id/databaseBtn"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:text="本地车牌库"
             app:layout_row="1"
             app:layout_column="0"
             app:layout_columnWeight="1"
-            android:layout_margin="8dp"/>
+            android:layout_margin="8dp"
+            android:textAllCaps="false"/>
 
         <Button
             android:id="@+id/exportBtn"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:text="备份本地车牌库"
             app:layout_row="1"
             app:layout_column="1"
             app:layout_columnWeight="1"
-            android:layout_margin="8dp"/>
+            android:layout_margin="8dp"
+            android:textAllCaps="false"/>
 
         <Button
             android:id="@+id/importBtn"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:text="导入已有车牌库"
             app:layout_row="2"
             app:layout_column="0"
             app:layout_columnWeight="1"
-            android:layout_margin="8dp"/>
+            android:layout_margin="8dp"
+            android:textAllCaps="false"/>
+
+        <Button
+            android:id="@+id/loginBtn"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:text="登录/注册"
+            app:layout_row="2"
+            app:layout_column="1"
+            app:layout_columnWeight="1"
+            android:layout_margin="8dp"
+            android:textAllCaps="false"/>
     </androidx.gridlayout.widget.GridLayout>
 
     <ImageView
         android:id="@+id/imageView"
-        android:layout_width="297dp"
-        android:layout_height="419dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/button_grid"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/mResult"
         app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="16dp"/>
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        app:layout_constraintVertical_weight="2"
+        android:adjustViewBounds="true"
+        android:scaleType="fitCenter"
+        android:contentDescription="图片预览区"
+        />
 
     <TextView
         android:id="@+id/mResult"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="欢迎使用车牌识别助手"
-        android:textSize="20sp"
+        android:textSize="18sp"
         app:layout_constraintTop_toBottomOf="@id/imageView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         android:gravity="center"
-        android:layout_marginTop="8dp"/>
+        android:layout_marginBottom="24dp"
+        android:layout_marginTop="8dp"
+        />
 </androidx.constraintlayout.widget.ConstraintLayout>
