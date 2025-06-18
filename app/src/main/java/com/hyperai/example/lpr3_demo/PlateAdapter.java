@@ -1,13 +1,11 @@
 package com.hyperai.example.lpr3_demo;
 
+import android.app.Activity;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.BaseAdapter;
-import android.widget.ImageView;
-import android.widget.TextView;
-
+import android.widget.*;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -16,7 +14,7 @@ import java.util.Locale;
 
 public class PlateAdapter extends BaseAdapter {
 
-    private Context context;
+    private Context context;  // 这里要传Activity的Context
     private List<PlateEntity> plates;
 
     public PlateAdapter(Context context, List<PlateEntity> plates) {
@@ -69,6 +67,7 @@ public class PlateAdapter extends BaseAdapter {
         File imgFile = (imagePath != null && !imagePath.isEmpty()) ? new File(imagePath) : null;
         if (imgFile != null && imgFile.exists()) {
             holder.imgPreview.setVisibility(View.VISIBLE);
+            // 这里用Activity context
             holder.imgPreview.setOnClickListener(v -> {
                 PlateImageActivity.start(context, plate.getPlateCode(), plate.getImagePath());
             });

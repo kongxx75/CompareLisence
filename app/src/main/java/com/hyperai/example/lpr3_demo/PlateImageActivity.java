@@ -19,10 +19,18 @@ public class PlateImageActivity extends AppCompatActivity {
     private PhotoView photoView;
     private TextView textView;
 
+    /**
+     * 启动图片查看页，兼容 ApplicationContext 和 Activity Context。
+     * 推荐始终传递 Activity/Fragment 的 Context。
+     */
     public static void start(Context context, String plateCode, String imagePath) {
         Intent intent = new Intent(context, PlateImageActivity.class);
         intent.putExtra("plate_code", plateCode);
         intent.putExtra("image_path", imagePath);
+        // 修复：如不是Activity context需加FLAG_ACTIVITY_NEW_TASK
+        if (!(context instanceof android.app.Activity)) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        }
         context.startActivity(intent);
     }
 
