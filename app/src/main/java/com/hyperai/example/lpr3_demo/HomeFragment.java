@@ -46,6 +46,9 @@ public class HomeFragment extends Fragment {
     private Bitmap lastRecognizedBitmap = null;
     private String lastMatchedInfo = null;
 
+    // 新增：保存当前图片文件路径，便于后续大图预览和删除
+    private String currentImagePath = null;
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -72,7 +75,9 @@ public class HomeFragment extends Fragment {
                         try {
                             Bitmap bitmap = MediaStore.Images.Media.getBitmap(requireActivity().getContentResolver(), uri);
                             if (bitmap != null) {
-                                processAndShowPlate(bitmap, uri.toString());
+                                // 保存当前图片路径
+                                currentImagePath = getRealPathFromURI(uri);
+                                processAndShowPlate(bitmap, currentImagePath);
                             } else {
                                 Toast.makeText(getContext(), "图片加载失败", Toast.LENGTH_SHORT).show();
                             }
@@ -103,6 +108,59 @@ public class HomeFragment extends Fragment {
         fabAddPlate.setVisibility(View.GONE);
         fabNotify.setVisibility(View.GONE);
 
+        // 新增：图片点击放大与长按删除
+        imageView.setOnClickListener(v -> {
+            if (!TextUtils.isEmpty(currentImagePath)) {
+                PlateImageActivity.start(requireContext(), lastRecognizedPlate != null ? lastRecognizedPlate.getCode() : "", currentImagePath);
+            } else if (lastRecognizedBitmap != null) {
+                // 如果还没保存本地，先保存一份临时文件，再跳转
+                try {
+                    File tmp = BitmapUtils.saveBitmapToPlateDir(requireContext(), lastRecognizedBitmap);
+                    currentImagePath = tmp.getAbsolutePath();
+                    PlateImageActivity.start(requireContext(), lastRecognizedPlate != null ? lastRecognizedPlate.getCode() : "", currentImagePath);
+                } catch (Exception e) {
+                    Toast.makeText(requireContext(), "无法打开大图: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                Toast.makeText(requireContext(), "无图片可查看", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        imageView.setOnLongClickListener(v -> {
+            if (TextUtils.isEmpty(currentImagePath)) {
+                Toast.makeText(requireContext(), "无图片可删除", Toast.LENGTH_SHORT).show();
+                return true;
+            }
+            new AlertDialog.Builder(requireContext())
+                    .setTitle("删除图片")
+                    .setMessage("确定要删除该图片吗？")
+                    .setPositiveButton("删除", (dialog, which) -> {
+                        File file = new File(currentImagePath);
+                        boolean existed = file.exists();
+                        boolean deleted = false;
+                        if (existed) {
+                            deleted = file.delete();
+                            requireActivity().sendBroadcast(
+                                    new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(file))
+                            );
+                        }
+                        if (deleted) {
+                            Toast.makeText(requireContext(), "图片已删除", Toast.LENGTH_SHORT).show();
+                        } else if (existed) {
+                            Toast.makeText(requireContext(), "图片文件删除失败", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(requireContext(), "图片文件不存在", Toast.LENGTH_SHORT).show();
+                        }
+                        // 清空当前图片信息
+                        imageView.setImageResource(android.R.color.transparent);
+                        currentImagePath = null;
+                        lastRecognizedBitmap = null;
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
+            return true;
+        });
+
         return root;
     }
 
@@ -131,7 +189,6 @@ public class HomeFragment extends Fragment {
         String codeWithType = "[" + type + "]" + plate.getCode();
         showText.append(codeWithType).append("\n");
 
-        // 识别后自动比对本地库
         checkPlateWithLocalDb(plate.getCode(), showText, plate, bitmap);
     }
 
@@ -197,6 +254,7 @@ public class HomeFragment extends Fragment {
                         try {
                             File file = BitmapUtils.saveBitmapToPlateDir(ctx, frameBitmap);
                             imagePath = (file != null) ? file.getAbsolutePath() : "";
+                            currentImagePath = imagePath; // 更新当前图片路径
                         } catch (Exception e) {
                             Toast.makeText(ctx, "图片保存失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                         }
@@ -231,7 +289,6 @@ public class HomeFragment extends Fragment {
         StringBuilder content = new StringBuilder();
         content.append(timeStr)
                 .append("，识别到车牌").append(plate.getCode());
-        // 可补充备注等内容
         new AlertDialog.Builder(requireContext())
                 .setTitle("是否发送通知？")
                 .setMessage(content.toString())
@@ -251,5 +308,20 @@ public class HomeFragment extends Fragment {
                 })
                 .setNegativeButton("否", (dialog, which) -> dialog.dismiss())
                 .show();
+    }
+
+    // 获取图片真实路径（兼容多种相册返回类型）
+    private String getRealPathFromURI(Uri contentUri) {
+        String[] proj = {MediaStore.Images.Media.DATA};
+        try (android.database.Cursor cursor = requireContext().getContentResolver().query(contentUri, proj, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int idx = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+                return cursor.getString(idx);
+            }
+        } catch (Exception e) {
+            // fallback
+        }
+        // 有些Android 10+直接返回content://uri
+        return contentUri.toString();
     }
 }
