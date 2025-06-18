@@ -21,6 +21,7 @@ import androidx.fragment.app.Fragment;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.hyperai.example.lpr3_demo.utils.BitmapUtils;
+import com.hyperai.example.lpr3_demo.utils.WxPusherUtils;
 import com.hyperai.hyperlpr3.HyperLPR3;
 import com.hyperai.hyperlpr3.bean.Plate;
 
@@ -29,17 +30,21 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Response;
+
 public class HomeFragment extends Fragment {
 
     private Button cameraBtn, albumBtn;
     private ImageView imageView;
     private TextView mResult;
-    private FloatingActionButton fabAddPlate;
+    private FloatingActionButton fabAddPlate, fabNotify;
     private ActivityResultLauncher<Intent> pickPhotoLauncher;
 
     private Plate lastRecognizedPlate = null;
     private Bitmap lastRecognizedBitmap = null;
-    private String lastMatchedInfo = null; // 记录本地匹配信息，便于逻辑判断
+    private String lastMatchedInfo = null;
 
     @Nullable
     @Override
@@ -52,6 +57,7 @@ public class HomeFragment extends Fragment {
         imageView = root.findViewById(R.id.imageView);
         mResult = root.findViewById(R.id.mResult);
         fabAddPlate = root.findViewById(R.id.fab_add_plate);
+        fabNotify = root.findViewById(R.id.fab_notify);
 
         cameraBtn.setOnClickListener(view -> {
             Intent intent = new Intent(getContext(), CameraActivity.class);
@@ -88,8 +94,14 @@ public class HomeFragment extends Fragment {
             }
         });
 
-        // 启动时隐藏FAB
+        fabNotify.setOnClickListener(v -> {
+            if (lastRecognizedPlate != null) {
+                showSendNotifyDialog(lastRecognizedPlate);
+            }
+        });
+
         fabAddPlate.setVisibility(View.GONE);
+        fabNotify.setVisibility(View.GONE);
 
         return root;
     }
@@ -107,6 +119,7 @@ public class HomeFragment extends Fragment {
             showText.append("未识别到车牌");
             mResult.setText(showText.toString());
             fabAddPlate.setVisibility(View.GONE);
+            fabNotify.setVisibility(View.GONE);
             return;
         }
 
@@ -149,10 +162,12 @@ public class HomeFragment extends Fragment {
                             + "\n录入时间：" + formattedTime;
                     mResult.setText(showText.toString() + lastMatchedInfo);
                     fabAddPlate.setVisibility(View.GONE);
+                    fabNotify.setVisibility(View.VISIBLE);
                 } else {
                     lastMatchedInfo = null;
-                    mResult.setText(showText.toString() + "本地车牌库无此车牌");
+                    mResult.setText(showText.toString() + "未在本地库中找到该车牌");
                     fabAddPlate.setVisibility(View.VISIBLE);
+                    fabNotify.setVisibility(View.VISIBLE);
                 }
             });
         }).start();
@@ -207,6 +222,34 @@ public class HomeFragment extends Fragment {
                         }
                     }).start();
                 })
+                .show();
+    }
+
+    // 发送通知弹窗
+    private void showSendNotifyDialog(Plate plate) {
+        String timeStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+        StringBuilder content = new StringBuilder();
+        content.append(timeStr)
+                .append("，识别到车牌").append(plate.getCode());
+        // 可补充备注等内容
+        new AlertDialog.Builder(requireContext())
+                .setTitle("是否发送通知？")
+                .setMessage(content.toString())
+                .setCancelable(false)
+                .setPositiveButton("是", (dialog, which) -> {
+                    WxPusherUtils.sendMessage(content.toString(), new Callback() {
+                        @Override public void onFailure(Call call, java.io.IOException e) {
+                            requireActivity().runOnUiThread(() ->
+                                    Toast.makeText(requireContext(), "消息发送失败", Toast.LENGTH_SHORT).show());
+                        }
+                        @Override public void onResponse(Call call, Response response) {
+                            requireActivity().runOnUiThread(() ->
+                                    Toast.makeText(requireContext(), "消息已发送", Toast.LENGTH_SHORT).show());
+                        }
+                    });
+                    dialog.dismiss();
+                })
+                .setNegativeButton("否", (dialog, which) -> dialog.dismiss())
                 .show();
     }
 }
