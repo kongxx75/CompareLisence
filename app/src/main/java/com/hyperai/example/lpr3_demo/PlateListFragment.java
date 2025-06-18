@@ -7,12 +7,14 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.view.View;
 import android.widget.*;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 public class PlateListFragment extends Fragment {
@@ -20,19 +22,28 @@ public class PlateListFragment extends Fragment {
     private PlateAdapter adapter;
     private EditText searchEditText;
     private TextView emptyTextView;
-    private List<PlateEntity> plates;
+    private List<PlateEntity> plates = new ArrayList<>();
     private FloatingActionButton fabAdd;
+
+    // 分页参数
+    private static final int PAGE_SIZE = 30;
+    private static final int LOAD_MORE_SIZE = 20;
+    private boolean isLoading = false;
+    private boolean isLastPage = false;
+    private String currentQuery = null;
+    private int currentOffset = 0;
+    private PlateRepository repository;
 
     @Nullable
     @Override
-    public android.view.View onCreateView(@NonNull android.view.LayoutInflater inflater,
-                                          @Nullable android.view.ViewGroup container,
-                                          @Nullable Bundle savedInstanceState) {
+    public View onCreateView(@NonNull android.view.LayoutInflater inflater,
+                             @Nullable android.view.ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_plate_list, container, false);
     }
 
     @Override
-    public void onViewCreated(@NonNull android.view.View root, @Nullable Bundle savedInstanceState) {
+    public void onViewCreated(@NonNull View root, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(root, savedInstanceState);
 
         listView = root.findViewById(R.id.plate_list);
@@ -41,13 +52,16 @@ public class PlateListFragment extends Fragment {
         fabAdd = root.findViewById(R.id.fab_add);
 
         searchEditText.setHint("输入查询信息");
-
-        loadPlateData(null);
+        repository = new PlateRepository(requireContext().getApplicationContext());
+        resetPaging();
+        loadPlateData(currentQuery, true);
 
         searchEditText.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                loadPlateData(s.toString());
+                currentQuery = s.toString();
+                resetPaging();
+                loadPlateData(currentQuery, true);
             }
             @Override public void afterTextChanged(Editable s) {}
         });
@@ -80,56 +94,61 @@ public class PlateListFragment extends Fragment {
         });
 
         fabAdd.setOnClickListener(v -> showAddPlateDialog());
+
+        // 上拉加载更多
+        listView.setOnScrollListener(new AbsListView.OnScrollListener() {
+            @Override public void onScrollStateChanged(AbsListView view, int scrollState) {}
+            @Override public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+                if (!isLoading && !isLastPage
+                        && totalItemCount > 0
+                        && (firstVisibleItem + visibleItemCount >= totalItemCount)
+                        && totalItemCount >= PAGE_SIZE) {
+                    loadPlateData(currentQuery, false);
+                }
+            }
+        });
     }
 
-    private void loadPlateData(String query) {
-        // 提前获取Context，避免子线程getContext()为null
-        final Context appCtx = requireContext().getApplicationContext();
-        final android.os.Handler mainHandler = new android.os.Handler(requireActivity().getMainLooper());
-        new Thread(() -> {
-            PlateDao dao = PlateDatabase.getInstance(appCtx).plateDao();
-            List<PlateEntity> result;
-            if (query == null || query.trim().isEmpty()) {
-                result = dao.getAllPlates();
-            } else {
-                result = dao.searchPlates("%" + query.trim() + "%");
-            }
-            plates = result;
-            mainHandler.post(() -> {
+    private void resetPaging() {
+        plates.clear();
+        currentOffset = 0;
+        isLastPage = false;
+        isLoading = false;
+        if (adapter != null) adapter.notifyDataSetChanged();
+    }
+
+    private void loadPlateData(String query, boolean isRefresh) {
+        if (isLoading || isLastPage) return;
+        isLoading = true;
+
+        int pageSize = isRefresh ? PAGE_SIZE : LOAD_MORE_SIZE;
+        int offset = isRefresh ? 0 : currentOffset;
+
+        repository.getPlatesPagedAsync(query, pageSize, offset, list -> {
+            // 切回主线程安全操作UI
+            requireActivity().runOnUiThread(() -> {
                 if (!isAdded()) return;
-                if (plates == null || plates.isEmpty()) {
-                    emptyTextView.setVisibility(android.view.View.VISIBLE);
-                    listView.setAdapter(null);
-                } else {
-                    emptyTextView.setVisibility(android.view.View.GONE);
-                    adapter = new PlateAdapter(appCtx, plates);
+
+                if (isRefresh) plates.clear();
+                if (list != null) plates.addAll(list);
+
+                currentOffset = plates.size();
+                isLastPage = (list == null || list.size() < pageSize);
+                isLoading = false;
+
+                if (adapter == null) {
+                    adapter = new PlateAdapter(requireContext().getApplicationContext(), plates);
                     listView.setAdapter(adapter);
+                } else {
+                    adapter.notifyDataSetChanged();
+                }
+                if (plates.isEmpty()) {
+                    emptyTextView.setVisibility(View.VISIBLE);
+                } else {
+                    emptyTextView.setVisibility(View.GONE);
                 }
             });
-        }).start();
-    }
-
-    private void deletePlate(PlateEntity plate) {
-        final Context appCtx = requireContext().getApplicationContext();
-        final android.os.Handler mainHandler = new android.os.Handler(requireActivity().getMainLooper());
-        new Thread(() -> {
-            String imagePath = plate.getImagePath();
-            if (imagePath != null && !imagePath.isEmpty()) {
-                File imgFile = new File(imagePath);
-                if (imgFile.exists()) {
-                    imgFile.delete();
-                    requireActivity().sendBroadcast(
-                            new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, android.net.Uri.fromFile(imgFile))
-                    );
-                }
-            }
-            PlateDatabase.getInstance(appCtx).plateDao().deletePlate(plate);
-            mainHandler.post(() -> {
-                if (!isAdded()) return;
-                Toast.makeText(requireContext(), "已删除", Toast.LENGTH_SHORT).show();
-                loadPlateData(searchEditText.getText().toString());
-            });
-        }).start();
+        });
     }
 
     private void showAddPlateDialog() {
@@ -159,7 +178,8 @@ public class PlateListFragment extends Fragment {
                 mainHandler.post(() -> {
                     if (!isAdded()) return;
                     Toast.makeText(requireContext(), "添加成功", Toast.LENGTH_SHORT).show();
-                    loadPlateData(searchEditText.getText().toString());
+                    resetPaging();
+                    loadPlateData(currentQuery, true);
                 });
             }).start();
         });
@@ -195,7 +215,8 @@ public class PlateListFragment extends Fragment {
                 mainHandler.post(() -> {
                     if (!isAdded()) return;
                     Toast.makeText(requireContext(), "修改成功", Toast.LENGTH_SHORT).show();
-                    loadPlateData(searchEditText.getText().toString());
+                    resetPaging();
+                    loadPlateData(currentQuery, true);
                 });
             }).start();
         });
@@ -210,5 +231,29 @@ public class PlateListFragment extends Fragment {
         builder.setPositiveButton("删除", (dialog, which) -> deletePlate(plate));
         builder.setNegativeButton("取消", null);
         builder.show();
+    }
+
+    private void deletePlate(PlateEntity plate) {
+        final Context appCtx = requireContext().getApplicationContext();
+        final android.os.Handler mainHandler = new android.os.Handler(requireActivity().getMainLooper());
+        new Thread(() -> {
+            String imagePath = plate.getImagePath();
+            if (imagePath != null && !imagePath.isEmpty()) {
+                File imgFile = new File(imagePath);
+                if (imgFile.exists()) {
+                    imgFile.delete();
+                    requireActivity().sendBroadcast(
+                            new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, android.net.Uri.fromFile(imgFile))
+                    );
+                }
+            }
+            PlateDatabase.getInstance(appCtx).plateDao().deletePlate(plate);
+            mainHandler.post(() -> {
+                if (!isAdded()) return;
+                Toast.makeText(requireContext(), "已删除", Toast.LENGTH_SHORT).show();
+                resetPaging();
+                loadPlateData(currentQuery, true);
+            });
+        }).start();
     }
 }
