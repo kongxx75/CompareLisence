@@ -147,7 +147,7 @@ public class HomeFragment extends Fragment {
                         if (deleted) {
                             Toast.makeText(requireContext(), "图片已删除", Toast.LENGTH_SHORT).show();
                         } else if (existed) {
-                            Toast.makeText(requireContext(), "图片文件删除失败", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(requireContext(), "无权限，请手动删除", Toast.LENGTH_SHORT).show();
                         } else {
                             Toast.makeText(requireContext(), "图片文件不存在", Toast.LENGTH_SHORT).show();
                         }
