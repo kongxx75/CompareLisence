@@ -31,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int REQ_EXPORT_DB = 1001;
     private static final int REQ_IMPORT_DB = 1002;
+    private BottomNavigationView navView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,30 +40,38 @@ public class MainActivity extends AppCompatActivity {
 
         PermissionUtils.checkAndRequestPermissions(this);
 
-        BottomNavigationView bottomNavigation = findViewById(R.id.bottom_navigation);
-        if (savedInstanceState == null) {
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.main_fragment_container, new HomeFragment())
-                    .commit();
-        }
-        bottomNavigation.setOnItemSelectedListener(item -> {
-            Fragment selectedFragment = null;
-            int id = item.getItemId();
-            if (id == R.id.tab_home) {
-                selectedFragment = new HomeFragment();
-            } else if (id == R.id.tab_library) {
-                selectedFragment = new LibraryFragment();
-            } else if (id == R.id.tab_mine) {
-                selectedFragment = new MineFragment();
+        navView = findViewById(R.id.nav_view);
+        navView.setOnNavigationItemSelectedListener(item -> {
+            Fragment fragment = null;
+            
+            int itemId = item.getItemId();
+            if (itemId == R.id.navigation_plate_list) {
+                fragment = new PlateListFragment();
+            } else if (itemId == R.id.navigation_recognition) {
+                // 启动实时识别
+                startActivity(new android.content.Intent(this, CameraActivity.class));
+                return true;
+            } else if (itemId == R.id.navigation_message) {
+                fragment = new MessageFragment();
+            } else if (itemId == R.id.navigation_user) {
+                fragment = new MineFragment();
             }
-            if (selectedFragment != null) {
-                getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.main_fragment_container, selectedFragment)
-                        .commit();
+
+            if (fragment != null) {
+                getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.container, fragment)
+                    .commit();
                 return true;
             }
             return false;
         });
+
+        // 默认显示车牌库页面
+        getSupportFragmentManager()
+            .beginTransaction()
+            .replace(R.id.container, new PlateListFragment())
+            .commit();
 
         // 初始化HyperLPR参数（如有必要）
         HyperLPRParameter parameter = new HyperLPRParameter()

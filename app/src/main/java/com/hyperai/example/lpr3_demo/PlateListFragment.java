@@ -7,7 +7,9 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.*;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -18,12 +20,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PlateListFragment extends Fragment {
+    private EditText searchEditText;
     private ListView listView;
     private PlateAdapter adapter;
-    private EditText searchEditText;
-    private TextView emptyTextView;
     private List<PlateEntity> plates = new ArrayList<>();
+    private PlateRepository repository;
     private FloatingActionButton fabAdd;
+    private TextView emptyTextView;
+    private ImageButton btnCamera;
 
     // 分页参数
     private static final int PAGE_SIZE = 30;
@@ -32,30 +36,30 @@ public class PlateListFragment extends Fragment {
     private boolean isLastPage = false;
     private String currentQuery = null;
     private int currentOffset = 0;
-    private PlateRepository repository;
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull android.view.LayoutInflater inflater,
-                             @Nullable android.view.ViewGroup container,
+    public View onCreateView(@NonNull LayoutInflater inflater,
+                             @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_plate_list, container, false);
-    }
+        View root = inflater.inflate(R.layout.fragment_plate_list, container, false);
 
-    @Override
-    public void onViewCreated(@NonNull View root, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(root, savedInstanceState);
-
+        // 初始化视图
         listView = root.findViewById(R.id.plate_list);
-        searchEditText = root.findViewById(R.id.searchEditText);
+        searchEditText = root.findViewById(R.id.et_search);
         emptyTextView = root.findViewById(R.id.emptyTextView);
         fabAdd = root.findViewById(R.id.fab_add);
+        btnCamera = root.findViewById(R.id.btn_camera);
 
+        // 初始化搜索框
         searchEditText.setHint("输入查询信息");
+        
+        // 初始化数据
         repository = new PlateRepository(requireContext().getApplicationContext());
         resetPaging();
         loadPlateData(currentQuery, true);
 
+        // 设置搜索监听
         searchEditText.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -66,6 +70,13 @@ public class PlateListFragment extends Fragment {
             @Override public void afterTextChanged(Editable s) {}
         });
 
+        // 设置摄像头按钮点击事件
+        btnCamera.setOnClickListener(v -> {
+            Intent intent = new Intent(getActivity(), PlateImageActivity.class);
+            startActivity(intent);
+        });
+
+        // 设置列表项长按事件
         listView.setOnItemLongClickListener((parent, view, position, id) -> {
             PlateEntity selectedPlate = plates.get(position);
             String[] options = {"取消", "修改", "删除"};
@@ -82,6 +93,7 @@ public class PlateListFragment extends Fragment {
             return true;
         });
 
+        // 设置列表项点击事件
         listView.setOnItemClickListener((parent, view, position, id) -> {
             PlateEntity selectedPlate = plates.get(position);
             String imagePath = selectedPlate.getImagePath();
@@ -93,9 +105,10 @@ public class PlateListFragment extends Fragment {
             }
         });
 
+        // 设置添加按钮点击事件
         fabAdd.setOnClickListener(v -> showAddPlateDialog());
 
-        // 上拉加载更多
+        // 设置上拉加载更多
         listView.setOnScrollListener(new AbsListView.OnScrollListener() {
             @Override public void onScrollStateChanged(AbsListView view, int scrollState) {}
             @Override public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
@@ -107,6 +120,8 @@ public class PlateListFragment extends Fragment {
                 }
             }
         });
+
+        return root;
     }
 
     private void resetPaging() {
@@ -125,7 +140,6 @@ public class PlateListFragment extends Fragment {
         int offset = isRefresh ? 0 : currentOffset;
 
         repository.getPlatesPagedAsync(query, pageSize, offset, list -> {
-            // 切回主线程安全操作UI
             requireActivity().runOnUiThread(() -> {
                 if (!isAdded()) return;
 
@@ -154,7 +168,7 @@ public class PlateListFragment extends Fragment {
     private void showAddPlateDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
         builder.setTitle("手动添加车牌");
-        final android.view.View dialogView = getLayoutInflater().inflate(R.layout.dialog_add_plate, null);
+        final View dialogView = getLayoutInflater().inflate(R.layout.dialog_add_plate, null);
         final EditText editPlateCode = dialogView.findViewById(R.id.edit_plate_code);
         final EditText editPlateType = dialogView.findViewById(R.id.edit_plate_type);
         builder.setView(dialogView);
@@ -190,7 +204,7 @@ public class PlateListFragment extends Fragment {
     private void showEditPlateDialog(PlateEntity plate) {
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
         builder.setTitle("修改车牌信息");
-        final android.view.View dialogView = getLayoutInflater().inflate(R.layout.dialog_add_plate, null);
+        final View dialogView = getLayoutInflater().inflate(R.layout.dialog_add_plate, null);
         final EditText editPlateCode = dialogView.findViewById(R.id.edit_plate_code);
         final EditText editPlateType = dialogView.findViewById(R.id.edit_plate_type);
 

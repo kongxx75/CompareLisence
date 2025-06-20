@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -5,38 +6,54 @@
     android:layout_height="match_parent">
 
     <LinearLayout
-        android:orientation="vertical"
-        android:padding="16dp"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp">
 
-        <EditText
-            android:id="@+id/searchEditText"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="输入查询信息"
-            android:drawableLeft="@android:drawable/ic_menu_search"
-            android:padding="8dp"
-            android:background="@android:drawable/edit_text" />
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/et_search"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@android:drawable/editbox_background"
+                android:hint="输入查询信息"
+                android:padding="8dp"
+                android:singleLine="true" />
+
+            <ImageButton
+                android:id="@+id/btn_camera"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:src="@android:drawable/ic_menu_camera" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/emptyTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="没有车牌记录"
-            android:visibility="gone"
             android:gravity="center"
-            android:padding="16dp"/>
+            android:padding="16dp"
+            android:text="没有车牌记录"
+            android:visibility="gone" />
 
         <ListView
             android:id="@+id/plate_list"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
+            android:clipToPadding="false"
             android:divider="@android:color/darker_gray"
             android:dividerHeight="1dp"
-            android:clipToPadding="false"
             android:paddingBottom="88dp" />
+
     </LinearLayout>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -46,7 +63,7 @@
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="24dp"
         android:layout_marginBottom="88dp"
-        android:src="@android:drawable/ic_input_add"
-        android:contentDescription="添加车牌" />
+        android:contentDescription="添加车牌"
+        android:src="@android:drawable/ic_input_add" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
