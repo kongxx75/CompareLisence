@@ -60,9 +60,13 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupNavigation() {
         navView.setOnNavigationItemSelectedListener(item -> {
-            Fragment fragment = null;
-            
             int itemId = item.getItemId();
+            if (itemId == currentNavItemId) {
+                // 如果点击的是当前已选中的项，不做任何操作，避免重复加载Fragment
+                return true;
+            }
+            currentNavItemId = itemId;
+            Fragment fragment = null;
             if (itemId == R.id.navigation_plate_list) {
                 fragment = new PlateListFragment();
             } else if (itemId == R.id.navigation_recognition) {
@@ -72,10 +76,10 @@ public class MainActivity extends AppCompatActivity {
             } else if (itemId == R.id.navigation_user) {
                 fragment = new MineFragment();
             }
-
             if (fragment != null) {
                 getSupportFragmentManager()
                     .beginTransaction()
+                    .setCustomAnimations(0, 0, 0, 0)
                     .replace(R.id.container, fragment)
                     .commit();
                 return true;
@@ -94,8 +98,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // 恢复导航栏状态
-        navView.setSelectedItemId(currentNavItemId);
+        // 移除navView.setSelectedItemId(currentNavItemId);，避免重复加载Fragment
     }
 
     @Override

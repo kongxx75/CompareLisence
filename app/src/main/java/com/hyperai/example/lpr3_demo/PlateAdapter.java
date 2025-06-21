@@ -69,7 +69,10 @@ public class PlateAdapter extends BaseAdapter {
             holder.imgPreview.setVisibility(View.VISIBLE);
             // 这里用Activity context
             holder.imgPreview.setOnClickListener(v -> {
-                PlateImageActivity.start(context, plate.getPlateCode(), plate.getImagePath());
+                if (context instanceof androidx.fragment.app.FragmentActivity) {
+                    PlateImageDialogFragment dialog = PlateImageDialogFragment.newInstance(plate.getPlateCode(), plate.getImagePath());
+                    dialog.show(((androidx.fragment.app.FragmentActivity) context).getSupportFragmentManager(), "plate_image");
+                }
             });
         } else {
             holder.imgPreview.setVisibility(View.GONE);

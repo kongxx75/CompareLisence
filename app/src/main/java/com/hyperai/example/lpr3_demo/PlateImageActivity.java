@@ -31,7 +31,12 @@ public class PlateImageActivity extends AppCompatActivity {
         if (!(context instanceof android.app.Activity)) {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         }
-        context.startActivity(intent);
+        if (context instanceof android.app.Activity) {
+            ((android.app.Activity) context).startActivity(intent);
+            ((android.app.Activity) context).overridePendingTransition(0, 0);
+        } else {
+            context.startActivity(intent);
+        }
     }
 
     @Override
@@ -124,5 +129,11 @@ public class PlateImageActivity extends AppCompatActivity {
                 finish(); // 返回车牌库
             });
         }).start();
+    }
+
+    @Override
+    public void finish() {
+        super.finish();
+        overridePendingTransition(0, 0);
     }
 }

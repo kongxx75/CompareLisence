@@ -99,7 +99,8 @@ public class PlateListFragment extends Fragment {
             String imagePath = selectedPlate.getImagePath();
             File imgFile = (imagePath != null && !imagePath.isEmpty()) ? new File(imagePath) : null;
             if (imgFile != null && imgFile.exists()) {
-                PlateImageActivity.start(getContext(), selectedPlate.getPlateCode(), imagePath);
+                PlateImageDialogFragment dialog = PlateImageDialogFragment.newInstance(selectedPlate.getPlateCode(), imagePath);
+                dialog.show(getParentFragmentManager(), "plate_image");
             } else {
                 Toast.makeText(requireContext(), "无相关的图片", Toast.LENGTH_SHORT).show();
             }
