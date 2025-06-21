@@ -67,6 +67,7 @@
         <activity android:name=".CameraActivity" />
         <activity android:name=".PlateListActivity" />
         <activity android:name=".PlateImageActivity" />
+        <activity android:name=".AlbumRecognitionActivity" />
         <activity android:name=".LoginRegisterActivity"/>
     </application>
 </manifest>

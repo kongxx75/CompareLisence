@@ -18,6 +18,8 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 
 public class PlateListFragment extends Fragment {
     private EditText searchEditText;
@@ -28,6 +30,7 @@ public class PlateListFragment extends Fragment {
     private FloatingActionButton fabAdd;
     private TextView emptyTextView;
     private ImageButton btnCamera;
+    private ActivityResultLauncher<Intent> pickPhotoLauncher;
 
     // 分页参数
     private static final int PAGE_SIZE = 30;
@@ -71,9 +74,27 @@ public class PlateListFragment extends Fragment {
         });
 
         // 设置摄像头按钮点击事件
+        pickPhotoLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == android.app.Activity.RESULT_OK && result.getData() != null) {
+                        android.net.Uri uri = result.getData().getData();
+                        if (uri != null) {
+                            String imagePath = getRealPathFromURI(uri);
+                            if (imagePath != null) {
+                                Intent intent = new Intent(getContext(), AlbumRecognitionActivity.class);
+                                intent.putExtra("image_path", imagePath);
+                                startActivity(intent);
+                            } else {
+                                Toast.makeText(getContext(), "无法获取图片路径", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    }
+                }
+        );
         btnCamera.setOnClickListener(v -> {
-            Intent intent = new Intent(getActivity(), PlateImageActivity.class);
-            startActivity(intent);
+            Intent intent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            pickPhotoLauncher.launch(intent);
         });
 
         // 设置列表项长按事件
@@ -270,5 +291,21 @@ public class PlateListFragment extends Fragment {
                 loadPlateData(currentQuery, true);
             });
         }).start();
+    }
+
+    // 获取图片真实路径
+    private String getRealPathFromURI(android.net.Uri uri) {
+        String[] proj = { android.provider.MediaStore.Images.Media.DATA };
+        android.database.Cursor cursor = requireActivity().getContentResolver().query(uri, proj, null, null, null);
+        if (cursor != null) {
+            int column_index = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Images.Media.DATA);
+            if (cursor.moveToFirst()) {
+                String path = cursor.getString(column_index);
+                cursor.close();
+                return path;
+            }
+            cursor.close();
+        }
+        return null;
     }
 }

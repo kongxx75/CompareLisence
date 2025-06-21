@@ -109,7 +109,7 @@ public class MainActivity extends AppCompatActivity {
             // 从相机界面返回时，确保导航栏显示正确的选中状态
             navView.setSelectedItemId(currentNavItemId);
         } else if (requestCode == REQ_EXPORT_DB) {
-            if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
             try {
                 File dbFile = getDatabasePath("plate_database");
                 if (!dbFile.exists() || dbFile.length() == 0) {
