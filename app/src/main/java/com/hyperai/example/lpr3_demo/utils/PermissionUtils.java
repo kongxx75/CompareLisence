@@ -23,4 +23,9 @@ public class PermissionUtils {
             }
         }
     }
+
+    public static boolean hasCameraPermission(android.content.Context context) {
+        return androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.CAMERA)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED;
+    }
 }

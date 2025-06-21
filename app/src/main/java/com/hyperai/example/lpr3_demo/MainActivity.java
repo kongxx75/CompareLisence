@@ -31,7 +31,9 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int REQ_EXPORT_DB = 1001;
     private static final int REQ_IMPORT_DB = 1002;
+    private static final int REQ_CAMERA_ACTIVITY = 1003;
     private BottomNavigationView navView;
+    private int currentNavItemId = R.id.navigation_plate_list; // 记录当前选中的导航项
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,6 +43,22 @@ public class MainActivity extends AppCompatActivity {
         PermissionUtils.checkAndRequestPermissions(this);
 
         navView = findViewById(R.id.nav_view);
+        setupNavigation();
+
+        // 默认显示车牌库页面
+        if (savedInstanceState == null) {
+            loadFragment(new PlateListFragment());
+        }
+
+        // 初始化HyperLPR参数（如有必要）
+        HyperLPRParameter parameter = new HyperLPRParameter()
+                .setDetLevel(HyperLPR3.DETECT_LEVEL_LOW)
+                .setMaxNum(1)
+                .setRecConfidenceThreshold(0.85f);
+        HyperLPR3.getInstance().init(this, parameter);
+    }
+
+    private void setupNavigation() {
         navView.setOnNavigationItemSelectedListener(item -> {
             Fragment fragment = null;
             
@@ -48,9 +66,7 @@ public class MainActivity extends AppCompatActivity {
             if (itemId == R.id.navigation_plate_list) {
                 fragment = new PlateListFragment();
             } else if (itemId == R.id.navigation_recognition) {
-                // 启动实时识别
-                startActivity(new android.content.Intent(this, CameraActivity.class));
-                return true;
+                fragment = new RecognitionFragment();
             } else if (itemId == R.id.navigation_message) {
                 fragment = new MessageFragment();
             } else if (itemId == R.id.navigation_user) {
@@ -66,56 +82,31 @@ public class MainActivity extends AppCompatActivity {
             }
             return false;
         });
+    }
 
-        // 默认显示车牌库页面
+    private void loadFragment(Fragment fragment) {
         getSupportFragmentManager()
             .beginTransaction()
-            .replace(R.id.container, new PlateListFragment())
+            .replace(R.id.container, fragment)
             .commit();
-
-        // 初始化HyperLPR参数（如有必要）
-        HyperLPRParameter parameter = new HyperLPRParameter()
-                .setDetLevel(HyperLPR3.DETECT_LEVEL_LOW)
-                .setMaxNum(1)
-                .setRecConfidenceThreshold(0.85f);
-        HyperLPR3.getInstance().init(this, parameter);
     }
 
-    // 保证为public, 供MineFragment调用
-    public void exportDatabase() {
-        runOnUiThread(() -> Toast.makeText(this, "准备导出，请稍候...", Toast.LENGTH_SHORT).show());
-        try {
-            PlateDatabase db = PlateDatabase.getInstance(getApplicationContext());
-            db.getOpenHelper().getWritableDatabase().execSQL("PRAGMA wal_checkpoint(FULL)");
-            db.close();
-        } catch (Exception e) {
-            // 忽略
-        }
-        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-        intent.setType("*/*");
-        intent.putExtra(Intent.EXTRA_TITLE, "plate_database");
-        startActivityForResult(intent, REQ_EXPORT_DB);
-    }
-
-    public void importDatabase() {
-        try {
-            PlateDatabase db = PlateDatabase.getInstance(getApplicationContext());
-            db.close();
-        } catch (Exception e) {
-            // 忽略
-        }
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        intent.setType("*/*");
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        startActivityForResult(intent, REQ_IMPORT_DB);
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // 恢复导航栏状态
+        navView.setSelectedItemId(currentNavItemId);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
-
-        if (requestCode == REQ_EXPORT_DB) {
+        
+        if (requestCode == REQ_CAMERA_ACTIVITY) {
+            // 从相机界面返回时，确保导航栏显示正确的选中状态
+            navView.setSelectedItemId(currentNavItemId);
+        } else if (requestCode == REQ_EXPORT_DB) {
+            if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
             try {
                 File dbFile = getDatabasePath("plate_database");
                 if (!dbFile.exists() || dbFile.length() == 0) {
@@ -134,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "导出失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
             }
         } else if (requestCode == REQ_IMPORT_DB) {
+            if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
             try {
                 InputStream in = getContentResolver().openInputStream(data.getData());
                 File dbFile = getDatabasePath("plate_database");
@@ -172,5 +164,34 @@ public class MainActivity extends AppCompatActivity {
             if (cursor != null) cursor.close();
             if (db != null) db.close();
         }
+    }
+
+    // 保证为public, 供MineFragment调用
+    public void exportDatabase() {
+        runOnUiThread(() -> Toast.makeText(this, "准备导出，请稍候...", Toast.LENGTH_SHORT).show());
+        try {
+            PlateDatabase db = PlateDatabase.getInstance(getApplicationContext());
+            db.getOpenHelper().getWritableDatabase().execSQL("PRAGMA wal_checkpoint(FULL)");
+            db.close();
+        } catch (Exception e) {
+            // 忽略
+        }
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.setType("*/*");
+        intent.putExtra(Intent.EXTRA_TITLE, "plate_database");
+        startActivityForResult(intent, REQ_EXPORT_DB);
+    }
+
+    public void importDatabase() {
+        try {
+            PlateDatabase db = PlateDatabase.getInstance(getApplicationContext());
+            db.close();
+        } catch (Exception e) {
+            // 忽略
+        }
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.setType("*/*");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        startActivityForResult(intent, REQ_IMPORT_DB);
     }
 }
