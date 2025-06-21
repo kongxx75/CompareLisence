@@ -146,6 +146,14 @@ public class PlateListFragment extends Fragment {
         return root;
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        // 每次Fragment可见时刷新数据
+        resetPaging();
+        loadPlateData(currentQuery, true);
+    }
+
     private void resetPaging() {
         plates.clear();
         currentOffset = 0;
