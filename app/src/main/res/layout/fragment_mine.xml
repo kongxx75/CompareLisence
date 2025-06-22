@@ -22,17 +22,17 @@
         android:layout_marginBottom="16dp"/>
 
     <Button
-        android:id="@+id/btnImportDb"
+        android:id="@+id/btnLocalPlateManager"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="导入已有车牌库"
+        android:text="本地车牌库管理"
         android:layout_marginBottom="16dp"/>
 
     <Button
-        android:id="@+id/btnExportDb"
+        android:id="@+id/btnCloudPlateManager"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="备份本地车牌库"
+        android:text="云端车牌库管理"
         android:layout_marginBottom="16dp"/>
 
     <Button
