@@ -12,6 +12,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import com.hyperai.example.lpr3_demo.utils.UserManager;
+import cn.leancloud.LCUser;
 
 public class MineFragment extends Fragment {
 
@@ -35,12 +36,12 @@ public class MineFragment extends Fragment {
         refreshLoginStatus();
 
         btnLogin.setOnClickListener(v -> {
-            if (UserManager.isLoggedIn(mCtx)) {
+            if (UserManager.isLoggedIn()) {
                 new AlertDialog.Builder(mCtx)
                         .setTitle("退出登录")
                         .setMessage("确定要退出登录吗？")
                         .setPositiveButton("退出", (dialog, which) -> {
-                            UserManager.logout(mCtx);
+                            UserManager.logout();
                             Toast.makeText(mCtx, "已退出登录", Toast.LENGTH_SHORT).show();
                             refreshLoginStatus();
                         })
@@ -75,7 +76,7 @@ public class MineFragment extends Fragment {
     }
 
     private void refreshLoginStatus() {
-        String user = UserManager.getLoginUser(mCtx);
+        String user = UserManager.getLoginUser();
         if (user != null) {
             tvLoginStatus.setText("已登录用户: " + user);
             btnLogin.setText("退出登录");

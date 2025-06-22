@@ -1,40 +1,45 @@
 package com.hyperai.example.lpr3_demo.utils;
 
+import cn.leancloud.LCUser;
+import io.reactivex.Observer;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 import android.content.Context;
-import android.content.SharedPreferences;
 
 public class UserManager {
-    private static final String PREF_NAME = "users";
-    private static final String KEY_LOGIN = "current_login";
-
-    public static boolean register(Context ctx, String username, String password) {
-        SharedPreferences sp = ctx.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        if (sp.contains(username)) return false; // 已存在
-        sp.edit().putString(username, password).apply();
-        return true;
+    // 注册（异步，回调方式）
+    public static void register(String username, String password, Observer<LCUser> callback) {
+        LCUser user = new LCUser();
+        user.setUsername(username);
+        user.setPassword(password);
+        user.signUpInBackground()
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(callback);
     }
 
-    public static boolean login(Context ctx, String username, String password) {
-        SharedPreferences sp = ctx.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        String pwd = sp.getString(username, null);
-        if (pwd != null && pwd.equals(password)) {
-            sp.edit().putString(KEY_LOGIN, username).apply();
-            return true;
-        }
-        return false;
+    // 登录（异步，回调方式）
+    public static void login(String username, String password, Observer<LCUser> callback) {
+        LCUser.logIn(username, password)
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(callback);
     }
 
-    public static void logout(Context ctx) {
-        SharedPreferences sp = ctx.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        sp.edit().remove(KEY_LOGIN).apply();
+    // 登出
+    public static void logout() {
+        LCUser.logOut();
     }
 
-    public static String getLoginUser(Context ctx) {
-        SharedPreferences sp = ctx.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        return sp.getString(KEY_LOGIN, null);
+    // 获取当前登录用户的用户名
+    public static String getLoginUser() {
+        LCUser user = LCUser.getCurrentUser();
+        return user != null ? user.getUsername() : null;
     }
 
-    public static boolean isLoggedIn(Context ctx) {
-        return getLoginUser(ctx) != null;
+    // 是否已登录
+    public static boolean isLoggedIn() {
+        return LCUser.getCurrentUser() != null;
     }
 }

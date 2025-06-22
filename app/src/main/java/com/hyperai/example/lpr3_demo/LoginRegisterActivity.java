@@ -6,6 +6,10 @@ import android.view.View;
 import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
 import com.hyperai.example.lpr3_demo.utils.UserManager;
+import cn.leancloud.LCUser;
+import io.reactivex.Observer;
+import io.reactivex.disposables.Disposable;
+import android.util.Log;
 
 public class LoginRegisterActivity extends AppCompatActivity {
     private EditText etUser, etPwd, etPwd2;
@@ -40,12 +44,21 @@ public class LoginRegisterActivity extends AppCompatActivity {
                 Toast.makeText(this, "请输入用户名和密码", Toast.LENGTH_SHORT).show();
                 return;
             }
-            if (UserManager.login(this, u, p)) {
-                Toast.makeText(this, "登录成功", Toast.LENGTH_SHORT).show();
-                finish();
-            } else {
-                Toast.makeText(this, "用户名或密码错误", Toast.LENGTH_SHORT).show();
-            }
+            UserManager.login(u, p, new Observer<LCUser>() {
+                @Override
+                public void onSubscribe(Disposable d) {}
+                @Override
+                public void onNext(LCUser lcUser) {
+                    Toast.makeText(LoginRegisterActivity.this, "登录成功", Toast.LENGTH_SHORT).show();
+                    finish();
+                }
+                @Override
+                public void onError(Throwable e) {
+                    Toast.makeText(LoginRegisterActivity.this, "用户名或密码错误", Toast.LENGTH_SHORT).show();
+                }
+                @Override
+                public void onComplete() {}
+            });
         });
 
         btnRegister.setOnClickListener(v -> {
@@ -60,13 +73,27 @@ public class LoginRegisterActivity extends AppCompatActivity {
                 Toast.makeText(this, "两次密码输入不一致", Toast.LENGTH_SHORT).show();
                 return;
             }
-            if (UserManager.register(this, u, p)) {
-                Toast.makeText(this, "注册成功，请登录", Toast.LENGTH_SHORT).show();
-                isLoginMode = true;
-                updateView();
-            } else {
-                Toast.makeText(this, "用户名已存在", Toast.LENGTH_SHORT).show();
-            }
+            UserManager.register(u, p, new Observer<LCUser>() {
+                @Override
+                public void onSubscribe(Disposable d) {}
+                @Override
+                public void onNext(LCUser lcUser) {
+                    Toast.makeText(LoginRegisterActivity.this, "注册成功，请登录", Toast.LENGTH_SHORT).show();
+                    isLoginMode = true;
+                    updateView();
+                }
+                @Override
+                public void onError(Throwable e) {
+                    String msg = e.getMessage();
+                    if (msg != null && msg.contains("already used")) {
+                        Toast.makeText(LoginRegisterActivity.this, "用户名已存在", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(LoginRegisterActivity.this, "注册失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                }
+                @Override
+                public void onComplete() {}
+            });
         });
     }
 

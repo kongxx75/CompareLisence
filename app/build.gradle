@@ -52,4 +52,10 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:4.9.3'
 
     implementation 'com.github.chrisbanes:PhotoView:2.3.0'
+
+    //leancloud
+    implementation 'cn.leancloud:storage-android:8.2.28'
+    implementation 'cn.leancloud:realtime-android:8.2.28'
+    implementation 'io.reactivex.rxjava2:rxandroid:2.1.1'
+
 }
