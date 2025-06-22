@@ -121,12 +121,13 @@ public class PlateImageActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 if (finalDeleted) {
                     Toast.makeText(this, "图片已删除", Toast.LENGTH_SHORT).show();
+                    setResult(RESULT_OK); // 通知调用方刷新
+                    finish();
                 } else if (existed) {
                     Toast.makeText(this, "图片文件删除失败", Toast.LENGTH_SHORT).show();
                 } else {
                     Toast.makeText(this, "图片文件不存在", Toast.LENGTH_SHORT).show();
                 }
-                finish(); // 返回车牌库
             });
         }).start();
     }

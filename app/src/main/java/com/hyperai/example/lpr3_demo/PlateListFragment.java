@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import android.app.Activity;
 
 public class PlateListFragment extends Fragment {
     private EditText searchEditText;
@@ -31,6 +32,7 @@ public class PlateListFragment extends Fragment {
     private TextView emptyTextView;
     private ImageButton btnCamera;
     private ActivityResultLauncher<Intent> pickPhotoLauncher;
+    private ActivityResultLauncher<Intent> viewImageLauncher;
 
     // 分页参数
     private static final int PAGE_SIZE = 30;
@@ -115,13 +117,25 @@ public class PlateListFragment extends Fragment {
         });
 
         // 设置列表项点击事件
+        viewImageLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK) {
+                    // 图片有变动，刷新列表
+                    resetPaging();
+                    loadPlateData(currentQuery, true);
+                }
+            }
+        );
         listView.setOnItemClickListener((parent, view, position, id) -> {
             PlateEntity selectedPlate = plates.get(position);
             String imagePath = selectedPlate.getImagePath();
             File imgFile = (imagePath != null && !imagePath.isEmpty()) ? new File(imagePath) : null;
             if (imgFile != null && imgFile.exists()) {
-                PlateImageDialogFragment dialog = PlateImageDialogFragment.newInstance(selectedPlate.getPlateCode(), imagePath);
-                dialog.show(getParentFragmentManager(), "plate_image");
+                Intent intent = new Intent(getContext(), PlateImageActivity.class);
+                intent.putExtra("plate_code", selectedPlate.getPlateCode());
+                intent.putExtra("image_path", imagePath);
+                viewImageLauncher.launch(intent);
             } else {
                 Toast.makeText(requireContext(), "无相关的图片", Toast.LENGTH_SHORT).show();
             }
