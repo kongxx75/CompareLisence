@@ -136,7 +136,7 @@ public class MineFragment extends Fragment {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(60, 60, 60, 60);
         layout.setGravity(Gravity.CENTER);
-        String[] options = {"查看/编辑本地车牌库", "导出本地车牌库"};
+        String[] options = {"导入本地车牌备份", "备份车牌库到本地"};
         for (int i = 0; i < options.length; i++) {
             TextView tv = new TextView(mCtx);
             tv.setText(options[i]);
@@ -150,7 +150,9 @@ public class MineFragment extends Fragment {
             tv.setOnClickListener(v -> {
                 dialog.dismiss();
                 if (index == 0) {
-                    startActivity(new Intent(mCtx, PlateListActivity.class));
+                    if (getActivity() instanceof MainActivity) {
+                        ((MainActivity) getActivity()).importDatabase();
+                    }
                 } else if (index == 1) {
                     if (getActivity() instanceof MainActivity) {
                         ((MainActivity) getActivity()).exportDatabase();
