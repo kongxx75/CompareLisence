@@ -55,7 +55,10 @@ public class MineFragment extends Fragment {
                         .setNegativeButton("取消", null)
                         .show();
             } else {
-                startActivity(new Intent(mCtx, LoginRegisterActivity.class));
+                Intent intent = new Intent(mCtx, LoginRegisterActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
+                if (getActivity() != null) getActivity().overridePendingTransition(0, 0);
             }
         });
 

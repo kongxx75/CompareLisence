@@ -87,6 +87,7 @@ public class PlateListFragment extends Fragment {
                                 Intent intent = new Intent(getContext(), AlbumRecognitionActivity.class);
                                 intent.putExtra("image_path", imagePath);
                                 startActivity(intent);
+                                if (getActivity() != null) getActivity().overridePendingTransition(0, 0);
                             } else {
                                 Toast.makeText(getContext(), "无法获取图片路径", Toast.LENGTH_SHORT).show();
                             }
@@ -136,6 +137,7 @@ public class PlateListFragment extends Fragment {
                 intent.putExtra("plate_code", selectedPlate.getPlateCode());
                 intent.putExtra("image_path", imagePath);
                 viewImageLauncher.launch(intent);
+                if (getActivity() != null) getActivity().overridePendingTransition(0, 0);
             } else {
                 Toast.makeText(requireContext(), "无相关的图片", Toast.LENGTH_SHORT).show();
             }

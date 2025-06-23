@@ -69,6 +69,9 @@
         <activity android:name=".PlateListActivity" />
         <activity android:name=".PlateImageActivity" />
         <activity android:name=".AlbumRecognitionActivity" />
-        <activity android:name=".LoginRegisterActivity"/>
+        <activity android:name=".LoginRegisterActivity" android:launchMode="singleTop"/>
+        <activity android:name=".AddFriendActivity" android:launchMode="singleTop" />
+        <activity android:name=".CreateGroupActivity" android:launchMode="singleTop" />
+        <activity android:name=".HistoryMessageActivity" android:launchMode="singleTop" />
     </application>
 </manifest>

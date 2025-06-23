@@ -65,6 +65,7 @@ public class HomeFragment extends Fragment {
         cameraBtn.setOnClickListener(view -> {
             Intent intent = new Intent(getContext(), CameraActivity.class);
             startActivity(intent);
+            if (getActivity() != null) getActivity().overridePendingTransition(0, 0);
         });
 
         pickPhotoLauncher = registerForActivityResult(
@@ -112,12 +113,13 @@ public class HomeFragment extends Fragment {
         imageView.setOnClickListener(v -> {
             if (!TextUtils.isEmpty(currentImagePath)) {
                 PlateImageActivity.start(requireContext(), lastRecognizedPlate != null ? lastRecognizedPlate.getCode() : "", currentImagePath);
+                if (getActivity() != null) getActivity().overridePendingTransition(0, 0);
             } else if (lastRecognizedBitmap != null) {
-                // 如果还没保存本地，先保存一份临时文件，再跳转
                 try {
                     File tmp = BitmapUtils.saveBitmapToPlateDir(requireContext(), lastRecognizedBitmap);
                     currentImagePath = tmp.getAbsolutePath();
                     PlateImageActivity.start(requireContext(), lastRecognizedPlate != null ? lastRecognizedPlate.getCode() : "", currentImagePath);
+                    if (getActivity() != null) getActivity().overridePendingTransition(0, 0);
                 } catch (Exception e) {
                     Toast.makeText(requireContext(), "无法打开大图: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 }

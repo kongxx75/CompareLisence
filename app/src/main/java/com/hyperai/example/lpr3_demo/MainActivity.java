@@ -26,6 +26,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -34,6 +36,9 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQ_CAMERA_ACTIVITY = 1003;
     private BottomNavigationView navView;
     private int currentNavItemId = R.id.navigation_plate_list; // 记录当前选中的导航项
+    private int backPressCount = 0;
+    private ActivityResultLauncher<Intent> exportDbLauncher;
+    private ActivityResultLauncher<Intent> importDbLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,6 +49,24 @@ public class MainActivity extends AppCompatActivity {
 
         navView = findViewById(R.id.nav_view);
         setupNavigation();
+
+        // Activity Result API 初始化
+        exportDbLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null && result.getData().getData() != null) {
+                    handleExportDb(result.getData().getData());
+                }
+            }
+        );
+        importDbLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null && result.getData().getData() != null) {
+                    handleImportDb(result.getData().getData());
+                }
+            }
+        );
 
         // 默认显示车牌库页面
         if (savedInstanceState == null) {
@@ -98,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // 移除navView.setSelectedItemId(currentNavItemId);，避免重复加载Fragment
+        backPressCount = 0; // 每次回到前台重置计数
     }
 
     @Override
@@ -169,7 +192,44 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // 保证为public, 供MineFragment调用
+    // 新增导出/导入数据库的回调处理方法
+    private void handleExportDb(android.net.Uri uri) {
+        try {
+            File dbFile = getDatabasePath("plate_database");
+            if (!dbFile.exists() || dbFile.length() == 0) {
+                Toast.makeText(this, "数据库文件不存在或为空，无法导出", Toast.LENGTH_LONG).show();
+                return;
+            }
+            InputStream in = new FileInputStream(dbFile);
+            OutputStream out = getContentResolver().openOutputStream(uri);
+            FileUtils.copyStream(in, out);
+            if (validateDatabaseFile(dbFile.getAbsolutePath())) {
+                Toast.makeText(this, "导出成功: " + dbFile.length() + " 字节", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "警告：导出的数据库文件可能不完整", Toast.LENGTH_LONG).show();
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "导出失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void handleImportDb(android.net.Uri uri) {
+        try {
+            InputStream in = getContentResolver().openInputStream(uri);
+            File dbFile = getDatabasePath("plate_database");
+            OutputStream out = new FileOutputStream(dbFile, false);
+            FileUtils.copyStream(in, out);
+            if (!validateDatabaseFile(dbFile.getAbsolutePath())) {
+                Toast.makeText(this, "导入的数据库文件无效或不兼容", Toast.LENGTH_LONG).show();
+                return;
+            }
+            Toast.makeText(this, "导入成功，加载中..", Toast.LENGTH_LONG).show();
+            android.os.Process.killProcess(android.os.Process.myPid());
+        } catch (Exception e) {
+            Toast.makeText(this, "导入失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
     public void exportDatabase() {
         runOnUiThread(() -> Toast.makeText(this, "准备导出，请稍候...", Toast.LENGTH_SHORT).show());
         try {
@@ -180,9 +240,9 @@ public class MainActivity extends AppCompatActivity {
             // 忽略
         }
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-        intent.setType("*/*");
+        intent.setType("application/octet-stream");
         intent.putExtra(Intent.EXTRA_TITLE, "plate_database");
-        startActivityForResult(intent, REQ_EXPORT_DB);
+        exportDbLauncher.launch(intent);
     }
 
     public void importDatabase() {
@@ -193,8 +253,30 @@ public class MainActivity extends AppCompatActivity {
             // 忽略
         }
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        intent.setType("*/*");
+        intent.setType("application/octet-stream");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        startActivityForResult(intent, REQ_IMPORT_DB);
+        importDbLauncher.launch(intent);
+    }
+
+    @Override
+    public void onBackPressed() {
+        // 1. 如果当前不是车牌库tab，第一次返回切换到车牌库
+        if (currentNavItemId != R.id.navigation_plate_list) {
+            navView.setSelectedItemId(R.id.navigation_plate_list);
+            backPressCount = 0; // 切换后重置计数
+            return;
+        }
+        // 2. 如果当前是车牌库tab，第二次返回弹窗提示
+        if (backPressCount == 0) {
+            backPressCount++;
+            new AlertDialog.Builder(this)
+                .setTitle("提示")
+                .setMessage("再次返回将回到桌面")
+                .setPositiveButton("确定", (dialog, which) -> {})
+                .show();
+            return;
+        }
+        // 3. 第三次返回才允许退出
+        super.onBackPressed();
     }
 }

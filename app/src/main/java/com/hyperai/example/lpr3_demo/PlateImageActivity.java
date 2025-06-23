@@ -81,6 +81,7 @@ public class PlateImageActivity extends AppCompatActivity {
             uri = Uri.fromFile(file);
         }
         intent.setDataAndType(uri, "image/*");
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
             startActivity(intent);
         } catch (Exception e) {
