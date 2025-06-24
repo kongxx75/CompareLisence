@@ -57,17 +57,58 @@ public class UserManager {
             .subscribe(callback);
     }
 
-    // 添加好友（自定义 Friend 表，记录双方关系）
+    // 判断是否已是好友
+    public static void isFriend(LCUser targetUser, io.reactivex.Observer<Boolean> callback) {
+        LCUser currentUser = LCUser.getCurrentUser();
+        if (currentUser == null) {
+            callback.onNext(false);
+            callback.onComplete();
+            return;
+        }
+        LCQuery<LCObject> query = new LCQuery<>("Friend");
+        query.whereEqualTo("user", currentUser);
+        query.whereEqualTo("friend", targetUser);
+        query.countInBackground()
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(new io.reactivex.Observer<Integer>() {
+                @Override
+                public void onSubscribe(Disposable d) { callback.onSubscribe(d); }
+                @Override
+                public void onNext(Integer count) { callback.onNext(count > 0); }
+                @Override
+                public void onError(Throwable e) { callback.onError(e); }
+                @Override
+                public void onComplete() { callback.onComplete(); }
+            });
+    }
+
+    // 添加好友（不能重复添加）
     public static void addFriend(LCUser targetUser, io.reactivex.Observer<LCObject> callback) {
         LCUser currentUser = LCUser.getCurrentUser();
         if (currentUser == null) return;
-        LCObject friend = new LCObject("Friend");
-        friend.put("user", currentUser);
-        friend.put("friend", targetUser);
-        friend.saveInBackground()
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(callback);
+        isFriend(targetUser, new io.reactivex.Observer<Boolean>() {
+            @Override
+            public void onSubscribe(Disposable d) { callback.onSubscribe(d); }
+            @Override
+            public void onNext(Boolean isFriend) {
+                if (isFriend) {
+                    callback.onError(new Exception("该用户已是您的好友"));
+                } else {
+                    LCObject friend = new LCObject("Friend");
+                    friend.put("user", currentUser);
+                    friend.put("friend", targetUser);
+                    friend.saveInBackground()
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(callback);
+                }
+            }
+            @Override
+            public void onError(Throwable e) { callback.onError(e); }
+            @Override
+            public void onComplete() { callback.onComplete(); }
+        });
     }
 
     // 获取当前用户的所有好友
