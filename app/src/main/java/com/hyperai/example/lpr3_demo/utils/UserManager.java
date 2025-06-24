@@ -69,4 +69,33 @@ public class UserManager {
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(callback);
     }
+
+    // 获取当前用户的所有好友
+    public static void getFriendList(io.reactivex.Observer<List<LCUser>> callback) {
+        LCUser currentUser = LCUser.getCurrentUser();
+        if (currentUser == null) return;
+        LCQuery<LCObject> query = new LCQuery<>("Friend");
+        query.whereEqualTo("user", currentUser);
+        query.include("friend");
+        query.findInBackground()
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(new io.reactivex.Observer<List<LCObject>>() {
+                @Override
+                public void onSubscribe(Disposable d) { callback.onSubscribe(d); }
+                @Override
+                public void onNext(List<LCObject> objects) {
+                    List<LCUser> friends = new java.util.ArrayList<>();
+                    for (LCObject obj : objects) {
+                        LCUser friend = (LCUser) obj.get("friend");
+                        if (friend != null) friends.add(friend);
+                    }
+                    callback.onNext(friends);
+                }
+                @Override
+                public void onError(Throwable e) { callback.onError(e); }
+                @Override
+                public void onComplete() { callback.onComplete(); }
+            });
+    }
 }
