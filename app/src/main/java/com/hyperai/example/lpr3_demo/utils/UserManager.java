@@ -139,4 +139,58 @@ public class UserManager {
                 public void onComplete() { callback.onComplete(); }
             });
     }
+
+    // 创建群组并添加成员
+    public static void createGroup(String name, String desc, String avatarUrl, List<LCUser> members, Observer<LCObject> callback) {
+        LCUser currentUser = LCUser.getCurrentUser();
+        if (currentUser == null) return;
+        cn.leancloud.LCObject group = new cn.leancloud.LCObject("Group");
+        group.put("name", name);
+        group.put("desc", desc);
+        if (avatarUrl != null && !avatarUrl.isEmpty()) {
+            group.put("avatar", avatarUrl);
+        }
+        group.put("creator", currentUser);
+        group.saveInBackground()
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(new Observer<cn.leancloud.LCObject>() {
+                @Override
+                public void onSubscribe(Disposable d) { callback.onSubscribe(d); }
+                @Override
+                public void onNext(cn.leancloud.LCObject groupObj) {
+                    // 添加成员（包括自己）
+                    List<LCUser> allMembers = new java.util.ArrayList<>(members);
+                    if (!allMembers.contains(currentUser)) allMembers.add(0, currentUser);
+                    for (LCUser user : allMembers) {
+                        cn.leancloud.LCObject member = new cn.leancloud.LCObject("GroupMember");
+                        member.put("group", groupObj);
+                        member.put("user", user);
+                        member.put("role", user.equals(currentUser) ? "owner" : "member");
+                        member.saveInBackground()
+                            .subscribeOn(Schedulers.io())
+                            .observeOn(AndroidSchedulers.mainThread())
+                            .subscribe();
+                    }
+                    callback.onNext(groupObj);
+                }
+                @Override
+                public void onError(Throwable e) { callback.onError(e); }
+                @Override
+                public void onComplete() { callback.onComplete(); }
+            });
+    }
+
+    // 查询我加入的所有群组
+    public static void getMyGroups(Observer<List<cn.leancloud.LCObject>> callback) {
+        LCUser currentUser = LCUser.getCurrentUser();
+        if (currentUser == null) return;
+        LCQuery<cn.leancloud.LCObject> query = new LCQuery<>("GroupMember");
+        query.whereEqualTo("user", currentUser);
+        query.include("group");
+        query.findInBackground()
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(callback);
+    }
 }
