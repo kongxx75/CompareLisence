@@ -71,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
         // 默认显示车牌库页面
         if (savedInstanceState == null) {
             loadFragment(new PlateListFragment());
-        }
+            }
 
         // 初始化HyperLPR参数（如有必要）
         HyperLPRParameter parameter = new HyperLPRParameter()
